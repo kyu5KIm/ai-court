@@ -207,6 +207,29 @@ class CourtTest(unittest.TestCase):
         self.assertEqual({m for juror, m in self.models if not juror}, {"sonnet"})
         self.assertEqual(runner["calls"]["jury/juror-01"]["model"], "haiku")
 
+    def test_parallel_caps_calls_at_once(self):
+        import threading
+        import time
+        for parallel, expected in ((1, 1), (12, 6)):
+            state = self.open_trial("--jury", "6")
+            live, peak, lock = [0], [0], threading.Lock()
+
+            def answer(prompt):
+                with lock:
+                    live[0] += 1
+                    peak[0] = max(peak[0], live[0])
+                time.sleep(0.05)
+                with lock:
+                    live[0] -= 1
+                return "VOTE: GUILTY" if "You are JUROR" in prompt else "1. point"
+
+            self.run_with(state, answer, parallel=parallel)
+            self.assertEqual(peak[0], expected)
+            shutil.rmtree(".court")
+            os.makedirs(".court")
+            with open(".court/case.md", "w") as f:
+                f.write("Quit my job to sell candles on Etsy full time\n")
+
     def fake_cli(self, lines):
         """An executable that prints `lines` (stream-json events) the way `claude -p` does."""
         script = os.path.join(self.tmp, "fake_claude.py")

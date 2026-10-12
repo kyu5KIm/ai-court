@@ -616,12 +616,14 @@ def set_runner(state, status, message="", phase=None, calls=None, seconds=None):
 JURY_MODELS = ("", "haiku", "sonnet", "opus")
 
 
-def run_trial(state, claude, model=None, log=print, jury_model=None):
+def run_trial(state, claude, model=None, log=print, jury_model=None, parallel=WAVE):
     """Drive a whole trial with `claude -p` calls in place of the clerk's sub-agents.
 
     Same phases, briefs and retry rules as SKILL.md: each phase's missing jobs run in parallel, missing
     ones are retried once, a juror that fails twice gets NO VOTE, anything else that fails twice stops
     the trial. `jury_model` runs the jurors on a different (usually faster) model than the other roles.
+    `parallel` caps how many calls of one phase run at once (1 to 12); more is faster for a big jury but
+    more likely to hit the plan's rate limit.
     """
     from concurrent.futures import ThreadPoolExecutor
 
@@ -656,7 +658,7 @@ def run_trial(state, claude, model=None, log=print, jury_model=None):
                 for j in jobs(state, phase):
                     with open(j["brief"], "w", encoding="utf-8") as f:
                         f.write(brief_text(state, phase, j))
-                with ThreadPoolExecutor(max_workers=WAVE) as pool:
+                with ThreadPoolExecutor(max_workers=max(1, min(parallel, DEFAULT_JURY))) as pool:
                     errors = [e for e in pool.map(lambda j: run_job(phase, j), todo) if e]
             todo = missing(state, phase)
             if todo and phase == "jury":
@@ -684,7 +686,8 @@ def cmd_run(args):
         sys.exit("court: the claude CLI is not on PATH")
     state = load_state()
     print("court: running %s with claude -p" % state["dir"], flush=True)
-    run_trial(state, claude, args.model, log=lambda m: print(m, flush=True), jury_model=args.jury_model)
+    run_trial(state, claude, args.model, log=lambda m: print(m, flush=True), jury_model=args.jury_model,
+              parallel=args.parallel)
 
 
 def cmd_serve(args):
@@ -800,7 +803,7 @@ def cmd_serve(args):
                 cfg["fixed"] = None
                 cfg["runner"] = threading.Thread(target=run_trial, daemon=True,
                                                  args=(state, claude, args.model, lambda m: print(m, flush=True),
-                                                       jury_model or None))
+                                                       jury_model or None, args.parallel))
                 cfg["runner"].start()
             print("court: trial opened from the page in %s (jury of %d%s)" % (
                 state["dir"], n, ", jurors on " + jury_model if jury_model else ""), flush=True)
@@ -922,11 +925,13 @@ def main(argv=None):
     pr = sub.add_parser("run")
     pr.add_argument("--model", help="model for every role (default: claude's default)")
     pr.add_argument("--jury-model", help="model for the jurors only, e.g. haiku (default: same as --model)")
+    pr.add_argument("--parallel", type=int, default=WAVE, help="calls run at once per phase, 1-12 (default 6)")
     ps = sub.add_parser("serve")
     ps.add_argument("--port", type=int, default=8765)
     ps.add_argument("--run", help="trial folder to serve (default: the latest, followed as new trials open)")
     ps.add_argument("--model", help="model for page-filed trials and questions (default: claude's default)")
     ps.add_argument("--jury-model", help="default jury model for page-filed trials, e.g. haiku")
+    ps.add_argument("--parallel", type=int, default=WAVE, help="calls run at once per phase, 1-12 (default 6)")
     args = p.parse_args(argv)
     if not args.cmd:
         p.print_help()
