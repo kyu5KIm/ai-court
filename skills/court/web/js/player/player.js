@@ -12,12 +12,14 @@ import { renderIntro, markIntroStarted } from "../transcript/intro.js";
 import { buildScenes } from "./scenes.js";
 import { sync, setNow } from "./controls.js";
 import { waitingFx } from "../live/status.js";
+import { clearDraft } from "../live/draft.js";
 
 /**
  * Start a scene. `manual` (the user pressed next) always scrolls it into view.
  * @param {import("../types.js").Scene} sc @param {boolean} [manual]
  */
 function play(sc, manual) {
+  clearDraft();
   clearTimers();
   const stick = !!manual || player.idx === 1 || nearBottom();
   setPhase(sc.phase);

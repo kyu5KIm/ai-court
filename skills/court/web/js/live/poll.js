@@ -7,6 +7,7 @@ import { mergeScenes } from "../player/player.js";
 import { fetchState } from "./api.js";
 import { syncQuestions } from "./questions.js";
 import { waitingFx } from "./status.js";
+import { updateDraft } from "./draft.js";
 
 async function pollOnce() {
   try {
@@ -17,6 +18,7 @@ async function pollOnce() {
     mergeScenes();
     syncQuestions();
     liveBadge();
+    updateDraft();
   } catch (e) {
     app.online = false;
     waitingFx();

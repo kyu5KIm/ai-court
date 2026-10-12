@@ -6,12 +6,12 @@ import { esc, inline, md } from "../core/markdown.js";
 import { cast, jurors, spotlight, talking } from "../stage/cast.js";
 import { say } from "../stage/bubble.js";
 import { measure } from "../stage/layout.js";
-import { logEl, avatar, follow } from "../transcript/messages.js";
+import { logEl, avatar, follow, nearBottom } from "../transcript/messages.js";
 import { postJSON } from "./api.js";
 
 /**
  * Rendered Q&A pairs by question id. `fresh` ones were asked on this page and get a stage reaction.
- * @type {{els: Record<string, {a: HTMLElement, fresh: boolean, filled: boolean}>, reactTimer: number}}
+ * @type {{els: Record<string, {a: HTMLElement, fresh: boolean, filled: boolean, partial: string}>, reactTimer: number}}
  */
 const qa = { els: {}, reactTimer: 0 };
 
@@ -39,7 +39,7 @@ function addQA(q, fresh, parent) {
     '</b><span class="tag">답변</span></header><div class="body"></div>';
   box.appendChild(u);
   box.appendChild(a);
-  const e = { a, fresh, filled: false };
+  const e = { a, fresh, filled: false, partial: "" };
   qa.els[q.id] = e;
   if (q.status !== "pending") fillAnswer(e, q);
   if (fresh) follow(a, true);
@@ -87,6 +87,13 @@ function react(q) {
 export function syncQuestions() {
   for (const q of app.data.questions || []) {
     const e = qa.els[q.id] || addQA(q, true);
+    if (q.status === "pending" && q.answer && q.answer !== e.partial) {
+      // The answer so far, while claude is still writing it.
+      const stick = nearBottom();
+      e.partial = q.answer;
+      /** @type {HTMLElement} */ (e.a.querySelector(".body")).innerHTML = md(q.answer);
+      if (e.fresh) follow(e.a, stick);
+    }
     if (q.status !== "pending" && !e.filled) {
       fillAnswer(e, q);
       if (e.fresh) {

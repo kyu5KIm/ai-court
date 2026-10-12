@@ -56,6 +56,7 @@
  * @property {boolean} finished
  * @property {Question[]} [questions]
  * @property {Runner | null} [runner]
+ * @property {Record<string, string>} [drafts]  replies still being written, by "<phase>/<job id>"
  * @property {string} dir
  * @property {number | null} [seed]
  * @property {boolean} live      true when served by `court.py serve`
