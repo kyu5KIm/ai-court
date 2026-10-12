@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -121,6 +122,29 @@ class CourtTest(unittest.TestCase):
         self.write_all(state, "opening", "</script><b>x</b>")
         html = court.page_html(court.trial_data(state))
         self.assertEqual(html.count("</script>"), 2)
+
+    def test_page_is_one_self_contained_file(self):
+        html = court.page_html(court.trial_data(self.open_trial("--jury", "3")))
+        self.assertNotIn('<link rel="stylesheet"', html)
+        self.assertNotIn('type="module"', html)
+        styles = os.listdir(os.path.join(court.WEB, "styles"))
+        self.assertEqual(html.count("<style>"), len(styles))
+        script = html.split('<script>\n', 1)[1]
+        self.assertNotRegex(script, r"(?m)^\s*(import|export)\b")
+        for module in ("js/main.js", "js/core/state.js", "js/stage/cast.js", "js/player/player.js", "js/live/poll.js"):
+            self.assertIn("// " + module + "\n", script)
+
+    def test_joined_modules_do_not_reuse_a_top_level_name(self):
+        js = court.bundle_js(os.path.join(court.WEB, "js", "main.js"))
+        names = re.findall(r"(?m)^(?:async )?(?:function|const|let|class) ([\w$]+)", js)
+        self.assertEqual(sorted(n for n in set(names) if names.count(n) > 1), [])
+
+    def test_bundler_refuses_imports_it_cannot_join(self):
+        entry = os.path.join(self.tmp, "entry.js")
+        with open(entry, "w", encoding="utf-8") as f:
+            f.write('import a from "./a.js";\na();\n')
+        with self.assertRaises(ValueError):
+            court.bundle_js(entry)
 
     def test_run_trial_without_a_session(self):
         state = self.open_trial("--jury", "3")

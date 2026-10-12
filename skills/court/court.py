@@ -308,7 +308,7 @@ EXPORT_RE = re.compile(r"^export (?=(?:async )?function |const |let |class )", r
 def bundle_js(entry):
     """Join an ES module graph into one script, dependencies first.
 
-    Modules must stick to single-line `import { a, b } from "./x.js";` and `export function/const/let/class`.
+    Modules must use named imports (`import { a, b } from "./x.js";`) and `export function/const/let/class`.
     Every top-level name shares one scope after joining, so names must be unique across modules.
     """
     order, seen = [], set()
