@@ -230,6 +230,18 @@ class CourtTest(unittest.TestCase):
             with open(".court/case.md", "w") as f:
                 f.write("Quit my job to sell candles on Etsy full time\n")
 
+    def test_drafts_are_served_while_writing_and_cleared_after(self):
+        state = self.open_trial("--jury", "3")
+        job = court.jobs(state, "opening")[0]
+        court.write_draft(court.draft_path(job), "1. half a poi")
+        self.assertEqual(court.trial_data(state)["drafts"], {"opening/prosecution": "1. half a poi"})
+        court.write_text(job["output"], "1. a point\n")
+        self.assertEqual(court.trial_data(state)["drafts"], {})  # a finished job hides its draft
+        court.drop_draft(court.draft_path(job))
+        self.run_with(state, lambda p: "VOTE: GUILTY" if "You are JUROR" in p else "1. point")
+        left = [f for d, _, fs in os.walk(state["dir"]) for f in fs if f.endswith((".draft", ".tmp"))]
+        self.assertEqual(left, [])
+
     def fake_cli(self, lines):
         """An executable that prints `lines` (stream-json events) the way `claude -p` does."""
         script = os.path.join(self.tmp, "fake_claude.py")

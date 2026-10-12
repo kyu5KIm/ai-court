@@ -277,9 +277,23 @@ def trial_data(state):
                        for ph in ("opening", "rebuttal") for side in ("prosecution", "defense")],
         "jurors": [dict(row, lens=j["lens"], voted=v) for row, j, v in zip(t["jurors"], state["jury"], voted)],
         "phase": phase, "finished": phase == "done", "questions": load_questions(state),
-        "runner": read_json(os.path.join(state["dir"], "runner.json")),
+        "runner": read_json(os.path.join(state["dir"], "runner.json")), "drafts": read_drafts(state),
         "dir": os.path.abspath(state["dir"]), "seed": state.get("seed"), "live": False,
     }
+
+
+def read_drafts(state):
+    """Replies still being written, by "<phase>/<job id>"."""
+    out = {}
+    for phase in PHASES:
+        for job in jobs(state, phase):
+            path = draft_path(job)
+            if os.path.exists(path) and not done(job):
+                try:
+                    out["%s/%s" % (phase, job["id"])] = read_text(path)
+                except OSError:
+                    pass
+    return out
 
 
 def read_json(path):
@@ -290,10 +304,58 @@ def read_json(path):
         return None
 
 
-def write_json(path, obj):
+def write_text(path, text, tries=20):
+    """Replace a file in one step, so a reader never sees half of it.
+
+    On Windows the swap fails while another thread has the file open (the page server reads these
+    files every second or two), so it retries for about a second before giving up.
+    """
     with open(path + ".tmp", "w", encoding="utf-8") as f:
-        json.dump(obj, f, ensure_ascii=False, indent=2)
-    os.replace(path + ".tmp", path)
+        f.write(text)
+    for i in range(tries):
+        try:
+            os.replace(path + ".tmp", path)
+            return
+        except PermissionError:
+            if i == tries - 1:
+                raise
+            time.sleep(0.05)
+
+
+def write_json(path, obj):
+    write_text(path, json.dumps(obj, ensure_ascii=False, indent=2))
+
+
+def draft_path(job):
+    """Where a call's reply-so-far is kept while it streams."""
+    return job["output"] + ".draft"
+
+
+def write_draft(path, text):
+    """Best effort: if a reader holds the draft, skip; the next update lands."""
+    try:
+        write_text(path, text, tries=1)
+    except OSError:
+        pass
+
+
+def drop_draft(path):
+    try:
+        os.remove(path)
+    except OSError:
+        pass
+
+
+def throttled(fn, every=0.4):
+    """fn, called at most once per `every` seconds; the calls in between are dropped."""
+    last = [0.0]
+
+    def call(*a):
+        now = time.time()
+        if now - last[0] >= every:
+            last[0] = now
+            fn(*a)
+    return call
 
 
 # The courtroom page lives in web/ as plain files: index.html, styles/*.css and ES modules under js/.
@@ -551,7 +613,14 @@ def answer_question(state, rec, claude, model, slots):
     """Answer one question with a tool-less `claude -p` call that sees only the trial record."""
     with slots:
         try:
-            c = claude_call(claude, model, ask_prompt(state, rec), state["dir"], 300, system=QUESTION_SYSTEM)
+            def partial(text):
+                rec["answer"] = text
+                try:
+                    save_question(state, rec)
+                except OSError:
+                    pass
+            c = claude_call(claude, model, ask_prompt(state, rec), state["dir"], 300, system=QUESTION_SYSTEM,
+                            on_text=throttled(partial))
             rec.update(status="done", answer=c["text"], cost={k: v for k, v in c.items() if k != "text"})
         except Exception as e:
             rec.update(status="error", answer="답변을 받지 못했어요: %s" % e)
@@ -633,14 +702,17 @@ def run_trial(state, claude, model=None, log=print, jury_model=None, parallel=WA
     def run_job(phase, job):
         try:
             use = (jury_model or model) if phase == "jury" else model
-            c = claude_call(claude, use, headless_prompt(state, phase, job), state["dir"], system=TRIAL_SYSTEM)
-            with open(job["output"], "w", encoding="utf-8") as f:
-                f.write(c["text"] + "\n")
+            draft = draft_path(job)
+            c = claude_call(claude, use, headless_prompt(state, phase, job), state["dir"], system=TRIAL_SYSTEM,
+                            on_text=throttled(lambda text: write_draft(draft, text)))
+            write_text(job["output"], c["text"] + "\n")
+            drop_draft(draft)
             with lock:
                 calls["%s/%s" % (phase, job["id"])] = dict({k: v for k, v in c.items() if k != "text"},
                                                           model=use or "default")
             log("court: %s %s done in %s" % (phase, job["id"], cost_line(c)))
         except Exception as e:
+            drop_draft(draft_path(job))
             log("court: %s %s failed: %s" % (phase, job["id"], e))
             return str(e)
         return None
