@@ -149,12 +149,14 @@ class CourtTest(unittest.TestCase):
     def run_with(self, state, answer):
         """run_trial with claude_call replaced by `answer(prompt) -> text` (or an exception)."""
         def fake(claude, model, prompt, cwd, timeout=600, on_text=None, system=None):
+            self.systems.append(system)
             text = answer(prompt)
             if on_text:
                 on_text(text[:3])
                 on_text(text)
             return {"text": text, "seconds": 0.2, "first_text": 0.1, "input": 50, "cache_read": 0,
                     "cache_write": 0, "output": 7}
+        self.systems = []
         real, court.claude_call = court.claude_call, fake
         try:
             court.run_trial(state, "claude", log=lambda m: None)
@@ -180,6 +182,7 @@ class CourtTest(unittest.TestCase):
             ["opening/prosecution", "opening/defense", "rebuttal/prosecution", "rebuttal/defense",
              "jury/juror-01", "jury/juror-02", "jury/juror-03", "judge/judge"]))
         self.assertEqual(runner["calls"]["judge/judge"]["output"], 7)
+        self.assertEqual(set(self.systems), {court.TRIAL_SYSTEM})
         self.assertIn("GUILTY, 3 to 0", open(os.path.join(state["dir"], "VERDICT.md"), encoding="utf-8").read())
 
     def test_run_trial_stops_when_the_judge_fails(self):

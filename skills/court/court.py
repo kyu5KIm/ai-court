@@ -469,8 +469,16 @@ def claude_logged_in(claude):
         return True  # can't tell; let the first question find out
 
 
-def claude_call(claude, model, prompt, cwd, timeout=600, on_text=None):
-    """One tool-less `claude -p` call, streamed.
+# A short system prompt in place of Claude Code's default one (about 9,000 tokens of coding-agent
+# instructions these roles never use). The role itself is in the user message.
+TRIAL_SYSTEM = ("You play one part in a structured trial of an idea. You have no tools: everything you know "
+                "is in the user's message. Follow the brief in it exactly and reply only with the text it asks for.")
+QUESTION_SYSTEM = ("You answer one question as a participant in a trial, using only the trial record in the "
+                   "user's message. Stay in your role and follow the message's instructions on language and length.")
+
+
+def claude_call(claude, model, prompt, cwd, timeout=600, on_text=None, system=None):
+    """One tool-less `claude -p` call, streamed. `system` replaces the default system prompt.
 
     `on_text(reply_so_far)` runs as the reply grows. Returns the reply and what the call cost:
     {"text", "seconds", "first_text" (seconds until the first words), "input", "cache_read",
@@ -480,6 +488,8 @@ def claude_call(claude, model, prompt, cwd, timeout=600, on_text=None):
            "--output-format", "stream-json", "--verbose", "--include-partial-messages"]
     if model:
         cmd += ["--model", model]
+    if system:
+        cmd += ["--system-prompt", system]
     t0 = time.time()
     p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                          encoding="utf-8", errors="replace", env=child_env(), cwd=cwd)
@@ -541,7 +551,7 @@ def answer_question(state, rec, claude, model, slots):
     """Answer one question with a tool-less `claude -p` call that sees only the trial record."""
     with slots:
         try:
-            c = claude_call(claude, model, ask_prompt(state, rec), state["dir"], 300)
+            c = claude_call(claude, model, ask_prompt(state, rec), state["dir"], 300, system=QUESTION_SYSTEM)
             rec.update(status="done", answer=c["text"], cost={k: v for k, v in c.items() if k != "text"})
         except Exception as e:
             rec.update(status="error", answer="답변을 받지 못했어요: %s" % e)
@@ -616,7 +626,7 @@ def run_trial(state, claude, model=None, log=print):
 
     def run_job(phase, job):
         try:
-            c = claude_call(claude, model, headless_prompt(state, phase, job), state["dir"])
+            c = claude_call(claude, model, headless_prompt(state, phase, job), state["dir"], system=TRIAL_SYSTEM)
             with open(job["output"], "w", encoding="utf-8") as f:
                 f.write(c["text"] + "\n")
             with lock:
