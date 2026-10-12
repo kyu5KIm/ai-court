@@ -1,0 +1,13 @@
+{
+  "//": "Editor-only: lets VS Code type-check the JSDoc in js/. Nothing needs to be installed or built.",
+  "compilerOptions": {
+    "checkJs": true,
+    "strict": true,
+    "target": "es2020",
+    "module": "es2020",
+    "moduleResolution": "bundler",
+    "lib": ["es2020", "dom", "dom.iterable"],
+    "noEmit": true
+  },
+  "include": ["js/**/*.js"]
+}
