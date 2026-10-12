@@ -18,6 +18,8 @@
 | 웹에서 새 사건 접수 | 페이지의 **＋ 새 사건** 버튼으로 사건을 접수하면, 서버가 `claude -p`로 검사, 변호인, 배심원, 판사를 차례로 불러 재판을 끝까지 진행해요. Claude Code 대화창으로 돌아갈 필요가 없어요. |
 | 법정에 질문 | 재판 중이나 끝난 뒤에 판사, 검사, 변호인, 서기, 배심원 누구에게나 질문할 수 있어요. 답하는 쪽은 그 재판의 기록만 보고 답해요. |
 | 답변 언어 | 하위 에이전트가 사건 기록과 같은 언어로 답하도록 지시를 더했어요. 한국어로 사건을 쓰면 진술과 판결도 한국어로 나와요. |
+| 쓰는 중인 글 보기 | 웹에서 연 재판은 진술과 판결문이 다 써지기 전부터 «작성 중» 초안으로 보여요. 질문 답변도 쓰이는 대로 보여요. |
+| 빠르고 가볍게 | 웹에서 연 재판과 질문은 짧은 전용 시스템 프롬프트를 써서 호출마다 약 9,100토큰을 덜 보내요. 배심원만 빠른 모델(haiku)로 돌릴 수 있고, 한 번에 돌릴 호출 수도 정할 수 있어요. 호출마다 걸린 시간과 토큰은 `runner.json`에 남아요. |
 
 ## 설치
 
@@ -77,12 +79,21 @@ claude auth login
 
 | 명령 | 하는 일 |
 | --- | --- |
-| `court.py serve [--port P] [--model M]` | 실시간 법정 서버. 새 사건 접수와 질문을 받아요. |
-| `court.py run [--model M]` | `init`으로 연 가장 최근 재판을 `claude -p`로 끝까지 진행해요. |
+| `court.py serve [--port P] [--model M] [--jury-model J] [--parallel N]` | 실시간 법정 서버. 새 사건 접수와 질문을 받아요. |
+| `court.py run [--model M] [--jury-model J] [--parallel N]` | `init`으로 연 가장 최근 재판을 `claude -p`로 끝까지 진행해요. |
 | `court.py render` | 평결을 세어 `VERDICT.md`와 `trial.html`을 써요. |
 | `court.py plan / init / next / prompts / check / tally` | 원작과 같은, 재판 진행용 장부 명령이에요. |
 
+| 옵션 | 뜻 |
+| --- | --- |
+| `--model M` | 모든 역할이 쓸 모델이에요. 비워 두면 `claude` 기본 모델을 써요. |
+| `--jury-model J` | 배심원만 쓸 모델이에요(예: `haiku`). 새 사건 접수 창의 «배심원 모델»로도 고를 수 있어요. |
+| `--parallel N` | 한 단계에서 동시에 돌릴 호출 수(1~12, 기본 6)예요. 배심원 12명을 한 번에 돌리려면 12로 올리면 돼요. 다만 요금제의 속도 제한에 걸리기 쉽고, 두 번 실패한 배심원은 «기권»이 돼요. |
+
 `claude`가 PATH에 없다면 `COURT_CLAUDE` 환경 변수에 실행 파일 경로를 적어 주세요.
+
+웹에서 연 재판이 끝나면 `.court/<날짜-시간>/runner.json`의 `calls`에 호출마다 걸린 시간, 첫 글자까지 걸린 시간, 토큰 수,
+쓴 모델이 남아요. 어느 단계가 느린지 볼 때 쓰면 돼요.
 
 ## 비용과 안전
 
@@ -111,7 +122,7 @@ skills/court/web/
     stage/              sprite(픽셀 캐릭터) · cast(자리와 걷기) · bubble(말풍선) · effects(팻말·판사봉·도장) · layout
     player/             scenes(재판 기록 → 장면) · player(재생) · controls(버튼·키)
     transcript/         messages(기록창 메시지) · intro(첫 카드)
-    live/               api · poll(실시간 반영) · status · questions(질문) · newCase(새 사건)
+    live/               api · poll(실시간 반영) · status · draft(작성 중 초안) · questions(질문) · newCase(새 사건)
 ```
 
 `court.py`가 페이지를 보낼 때 `styles/`를 `<style>`로 붙이고, `js/`의 모듈을 의존 순서대로 이어 붙여 스크립트 하나로
@@ -127,6 +138,10 @@ skills/court/web/
 
 - Windows 11(한국어), Python 3.13에서 시험했어요. macOS와 Linux에서는 아직 시험하지 않았어요.
 - 진짜 `claude`로 웹 접수 재판(배심원 3명)을 끝까지 돌려 봤어요. 질문 답변은 가짜 `claude`로만 확인했어요.
+- 짧은 시스템 프롬프트, `haiku`/`sonnet` 모델 지정, 스트리밍은 진짜 `claude` 호출로 하나씩 확인했어요. 초안 표시와
+  역할별 모델이 들어간 웹 재판 전체 흐름은 가짜 `claude`로 확인했어요.
+- `claude -p`끼리는 프롬프트 앞부분이 같아도 캐시를 나눠 쓰지 못한다는 것도 재 봤어요. 그래서 공통 기록을 앞에 두는
+  방식은 넣지 않았어요.
 - 단위 테스트:
 
 ```bash
@@ -172,6 +187,10 @@ itself is unchanged. This version adds:
   questions for any participant, and can open a new case from the page. Page-filed trials and questions run
   through tool-less `claude -p` calls, so they need the `claude` CLI logged in.
 - **`court.py run`**: run the latest trial headless with `claude -p`.
+- **Faster, lighter page-filed trials.** Calls stream, so statements, the judgment and question answers
+  show as drafts while they are written. They use a short system prompt in place of Claude Code's default
+  one (about 9,100 tokens less per call), `--jury-model` (or the dialog) runs jurors on a faster model,
+  `--parallel` sets how many calls run at once, and runner.json records each call's time and tokens.
 - Sub-agents are told to write in the language of the case file.
 
 The page text is Korean. Tested on Windows 11 only. Not made by or affiliated with Anthropic; the pixel
