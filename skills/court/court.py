@@ -612,12 +612,16 @@ def set_runner(state, status, message="", phase=None, calls=None, seconds=None):
                 "seconds": seconds, "calls": calls or {}})
 
 
-def run_trial(state, claude, model=None, log=print):
+# Models the page may pick for the jury: the CLI's aliases, or "" for the same model as everyone else.
+JURY_MODELS = ("", "haiku", "sonnet", "opus")
+
+
+def run_trial(state, claude, model=None, log=print, jury_model=None):
     """Drive a whole trial with `claude -p` calls in place of the clerk's sub-agents.
 
     Same phases, briefs and retry rules as SKILL.md: each phase's missing jobs run in parallel, missing
     ones are retried once, a juror that fails twice gets NO VOTE, anything else that fails twice stops
-    the trial.
+    the trial. `jury_model` runs the jurors on a different (usually faster) model than the other roles.
     """
     from concurrent.futures import ThreadPoolExecutor
 
@@ -626,11 +630,13 @@ def run_trial(state, claude, model=None, log=print):
 
     def run_job(phase, job):
         try:
-            c = claude_call(claude, model, headless_prompt(state, phase, job), state["dir"], system=TRIAL_SYSTEM)
+            use = (jury_model or model) if phase == "jury" else model
+            c = claude_call(claude, use, headless_prompt(state, phase, job), state["dir"], system=TRIAL_SYSTEM)
             with open(job["output"], "w", encoding="utf-8") as f:
                 f.write(c["text"] + "\n")
             with lock:
-                calls["%s/%s" % (phase, job["id"])] = {k: v for k, v in c.items() if k != "text"}
+                calls["%s/%s" % (phase, job["id"])] = dict({k: v for k, v in c.items() if k != "text"},
+                                                          model=use or "default")
             log("court: %s %s done in %s" % (phase, job["id"], cost_line(c)))
         except Exception as e:
             log("court: %s %s failed: %s" % (phase, job["id"], e))
@@ -678,7 +684,7 @@ def cmd_run(args):
         sys.exit("court: the claude CLI is not on PATH")
     state = load_state()
     print("court: running %s with claude -p" % state["dir"], flush=True)
-    run_trial(state, claude, args.model, log=lambda m: print(m, flush=True))
+    run_trial(state, claude, args.model, log=lambda m: print(m, flush=True), jury_model=args.jury_model)
 
 
 def cmd_serve(args):
@@ -781,6 +787,9 @@ def cmd_serve(args):
                 return self.send_json(400, {"error": "사건은 10자 이상 6000자 이하로 적어 주세요"})
             if not 3 <= n <= 12:
                 return self.send_json(400, {"error": "배심원은 3명에서 12명 사이예요"})
+            jury_model = str(body.get("jury_model") or "").strip() or args.jury_model or ""
+            if jury_model not in JURY_MODELS and jury_model != args.jury_model:
+                return self.send_json(400, {"error": "배심원 모델은 haiku, sonnet, opus 중에서 골라 주세요"})
             if not cfg["login"]:
                 return self.send_json(503, {"error": NOT_LOGGED_IN})
             with QLOCK:
@@ -790,9 +799,11 @@ def cmd_serve(args):
                 state["dir"] = os.path.join(root, state["dir"])
                 cfg["fixed"] = None
                 cfg["runner"] = threading.Thread(target=run_trial, daemon=True,
-                                                 args=(state, claude, args.model, lambda m: print(m, flush=True)))
+                                                 args=(state, claude, args.model, lambda m: print(m, flush=True),
+                                                       jury_model or None))
                 cfg["runner"].start()
-            print("court: trial opened from the page in %s (jury of %d)" % (state["dir"], n), flush=True)
+            print("court: trial opened from the page in %s (jury of %d%s)" % (
+                state["dir"], n, ", jurors on " + jury_model if jury_model else ""), flush=True)
             self.send_json(200, {"dir": os.path.abspath(state["dir"]), "calls": n + 5})
 
     server = None
@@ -910,10 +921,12 @@ def main(argv=None):
         sub.add_parser(name)
     pr = sub.add_parser("run")
     pr.add_argument("--model", help="model for every role (default: claude's default)")
+    pr.add_argument("--jury-model", help="model for the jurors only, e.g. haiku (default: same as --model)")
     ps = sub.add_parser("serve")
     ps.add_argument("--port", type=int, default=8765)
     ps.add_argument("--run", help="trial folder to serve (default: the latest, followed as new trials open)")
-    ps.add_argument("--model", help="model for answering questions (default: claude's default)")
+    ps.add_argument("--model", help="model for page-filed trials and questions (default: claude's default)")
+    ps.add_argument("--jury-model", help="default jury model for page-filed trials, e.g. haiku")
     args = p.parse_args(argv)
     if not args.cmd:
         p.print_help()

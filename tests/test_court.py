@@ -146,20 +146,21 @@ class CourtTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             court.bundle_js(entry)
 
-    def run_with(self, state, answer):
+    def run_with(self, state, answer, **kw):
         """run_trial with claude_call replaced by `answer(prompt) -> text` (or an exception)."""
         def fake(claude, model, prompt, cwd, timeout=600, on_text=None, system=None):
             self.systems.append(system)
+            self.models.append(("JUROR" in prompt, model))
             text = answer(prompt)
             if on_text:
                 on_text(text[:3])
                 on_text(text)
             return {"text": text, "seconds": 0.2, "first_text": 0.1, "input": 50, "cache_read": 0,
                     "cache_write": 0, "output": 7}
-        self.systems = []
+        self.systems, self.models = [], []
         real, court.claude_call = court.claude_call, fake
         try:
-            court.run_trial(state, "claude", log=lambda m: None)
+            court.run_trial(state, "claude", log=lambda m: None, **kw)
         finally:
             court.claude_call = real
         return court.read_json(os.path.join(state["dir"], "runner.json"))
@@ -197,6 +198,14 @@ class CourtTest(unittest.TestCase):
         self.assertEqual(runner["status"], "error")
         self.assertIn("down", runner["message"])
         self.assertIn("jury/juror-03", runner["calls"])
+
+    def test_jury_model_only_applies_to_jurors(self):
+        state = self.open_trial("--jury", "3")
+        runner = self.run_with(state, lambda p: "VOTE: GUILTY" if "You are JUROR" in p else "1. point",
+                               model="sonnet", jury_model="haiku")
+        self.assertEqual({m for juror, m in self.models if juror}, {"haiku"})
+        self.assertEqual({m for juror, m in self.models if not juror}, {"sonnet"})
+        self.assertEqual(runner["calls"]["jury/juror-01"]["model"], "haiku")
 
     def fake_cli(self, lines):
         """An executable that prints `lines` (stream-json events) the way `claude -p` does."""

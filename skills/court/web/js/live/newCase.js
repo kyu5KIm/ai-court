@@ -30,8 +30,12 @@ export function setupNewCase() {
     go.disabled = true;
     err.textContent = "";
     try {
-      await postJSON("api/trial", { case: $("#nc-case").value, jury: Number($("#nc-jury").value), seed: $("#nc-seed").value },
-        "재판을 열지 못했어요");
+      await postJSON("api/trial", {
+        case: $("#nc-case").value,
+        jury: Number($("#nc-jury").value),
+        jury_model: $("#nc-jury-model").value,
+        seed: $("#nc-seed").value,
+      }, "재판을 열지 못했어요");
       location.href = "./?play=1";  // the new trial, playing as it arrives
     } catch (x) {
       err.textContent = (x instanceof Error && x.message) || "재판을 열지 못했어요";
