@@ -94,6 +94,35 @@ claude auth login
 - 쓰는 파일은 실행한 폴더의 `.court/` 안뿐이에요. `.court/`는 `.gitignore`에 들어 있어 재판 기록이 저장소에
   올라가지 않아요.
 
+## 화면 코드 구조
+
+법정 화면은 빌드 도구 없이 평범한 파일로 나뉘어 있어요. 고치는 사람도 쓰는 사람도 Node.js가 필요 없어요.
+
+```text
+skills/court/web/
+  index.html            화면 뼈대
+  styles/               tokens · base · layout · header · stage · characters · bubble
+                        controls · dialog · ask · transcript · motion · responsive
+  js/
+    main.js             시작점: 데이터 읽기, 화면 조립, 기능 연결
+    types.js            JSDoc 타입 (실행에는 쓰이지 않아요)
+    core/               state · constants · dom · clock · markdown
+    header/             제목, 진행 단계, LIVE 표시
+    stage/              sprite(픽셀 캐릭터) · cast(자리와 걷기) · bubble(말풍선) · effects(팻말·판사봉·도장) · layout
+    player/             scenes(재판 기록 → 장면) · player(재생) · controls(버튼·키)
+    transcript/         messages(기록창 메시지) · intro(첫 카드)
+    live/               api · poll(실시간 반영) · status · questions(질문) · newCase(새 사건)
+```
+
+`court.py`가 페이지를 보낼 때 `styles/`를 `<style>`로 붙이고, `js/`의 모듈을 의존 순서대로 이어 붙여 스크립트 하나로
+만들어요. 저장되는 `trial.html`도 같은 방식이라 파일 하나로 열려요. 모듈을 고칠 때는 두 가지만 지켜 주세요.
+
+- `import { a, b } from "./x.js";`처럼 이름을 골라 가져오고, `export function / const / let / class`로 내보내요.
+- 이어 붙이면 모든 모듈이 한 범위를 쓰므로, 최상위 이름이 다른 모듈과 겹치면 안 돼요. 테스트가 이걸 확인해요.
+
+`court.py serve`를 켜 둔 채 파일을 고치고 새로고침하면 바로 반영돼요. VS Code에서는 `web/jsconfig.json` 덕분에 JSDoc 타입
+검사가 돼요.
+
 ## 시험한 범위
 
 - Windows 11(한국어), Python 3.13에서 시험했어요. macOS와 Linux에서는 아직 시험하지 않았어요.
@@ -134,8 +163,11 @@ itself is unchanged. This version adds:
 
 - **UTF-8 everywhere.** Upstream reads files with the OS default encoding, which crashes on non-ASCII case
   files on Windows with a non-UTF-8 locale (for example Korean, cp949).
-- **A courtroom page** (`skills/court/trial.html`): pixel characters walk to the lectern, jurors raise vote
-  signs, the gavel falls. `render` saves a replay next to `VERDICT.md`.
+- **A courtroom page** (`skills/court/web/`): pixel characters walk to the lectern, jurors raise vote
+  signs, the gavel falls. `render` saves a replay next to `VERDICT.md`. The page is plain files with no
+  build step: stylesheets in `web/styles/` and ES modules by feature in `web/js/` (core, header, stage,
+  player, transcript, live). `court.py` inlines the CSS and joins the modules into one script when it
+  serves or saves the page, so neither users nor contributors need Node.js.
 - **`court.py serve`**: a local server (127.0.0.1 only, token-checked) that follows the trial live, takes
   questions for any participant, and can open a new case from the page. Page-filed trials and questions run
   through tool-less `claude -p` calls, so they need the `claude` CLI logged in.
