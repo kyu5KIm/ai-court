@@ -146,43 +146,92 @@ class CourtTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             court.bundle_js(entry)
 
+    def run_with(self, state, answer):
+        """run_trial with claude_call replaced by `answer(prompt) -> text` (or an exception)."""
+        def fake(claude, model, prompt, cwd, timeout=600, on_text=None, system=None):
+            text = answer(prompt)
+            if on_text:
+                on_text(text[:3])
+                on_text(text)
+            return {"text": text, "seconds": 0.2, "first_text": 0.1, "input": 50, "cache_read": 0,
+                    "cache_write": 0, "output": 7}
+        real, court.claude_call = court.claude_call, fake
+        try:
+            court.run_trial(state, "claude", log=lambda m: None)
+        finally:
+            court.claude_call = real
+        return court.read_json(os.path.join(state["dir"], "runner.json"))
+
     def test_run_trial_without_a_session(self):
         state = self.open_trial("--jury", "3")
         prompts = []
 
-        def fake(claude, model, prompt, cwd, timeout=600):
+        def answer(prompt):
             prompts.append(prompt)
             if "You are JUROR" in prompt:
                 return "VOTE: GUILTY\nREASON: thin record"
             return "## The sentence\nWait." if "You are the JUDGE" in prompt else "1. point"
 
-        real, court.claude_text = court.claude_text, fake
-        try:
-            court.run_trial(state, "claude", log=lambda m: None)
-        finally:
-            court.claude_text = real
+        runner = self.run_with(state, answer)
         self.assertEqual(len(prompts), 2 + 2 + 3 + 1)
         self.assertTrue(any("Quit my job to sell candles" in p for p in prompts))
-        self.assertEqual(court.read_json(os.path.join(state["dir"], "runner.json"))["status"], "done")
+        self.assertEqual(runner["status"], "done")
+        self.assertEqual(sorted(runner["calls"]), sorted(
+            ["opening/prosecution", "opening/defense", "rebuttal/prosecution", "rebuttal/defense",
+             "jury/juror-01", "jury/juror-02", "jury/juror-03", "judge/judge"]))
+        self.assertEqual(runner["calls"]["judge/judge"]["output"], 7)
         self.assertIn("GUILTY, 3 to 0", open(os.path.join(state["dir"], "VERDICT.md"), encoding="utf-8").read())
 
     def test_run_trial_stops_when_the_judge_fails(self):
         state = self.open_trial("--jury", "3")
 
-        def fake(claude, model, prompt, cwd, timeout=600):
+        def answer(prompt):
             if "You are the JUDGE" in prompt:
                 raise RuntimeError("down")
             return "VOTE: GUILTY" if "You are JUROR" in prompt else "1. point"
 
-        real, court.claude_text = court.claude_text, fake
-        try:
-            court.run_trial(state, "claude", log=lambda m: None)
-        finally:
-            court.claude_text = real
-        runner = court.read_json(os.path.join(state["dir"], "runner.json"))
+        runner = self.run_with(state, answer)
         self.assertEqual(runner["status"], "error")
         self.assertIn("down", runner["message"])
+        self.assertIn("jury/juror-03", runner["calls"])
 
+    def fake_cli(self, lines):
+        """An executable that prints `lines` (stream-json events) the way `claude -p` does."""
+        script = os.path.join(self.tmp, "fake_claude.py")
+        with open(script, "w", encoding="utf-8") as f:
+            f.write("import sys\nsys.stdin.read()\n")
+            for line in lines:
+                f.write("print(%r, flush=True)\n" % json.dumps(line))
+        if os.name == "nt":
+            exe = os.path.join(self.tmp, "fake_claude.cmd")
+            with open(exe, "w") as f:
+                f.write('@"%s" "%s" %%*\n' % (sys.executable, script))
+        else:
+            exe = os.path.join(self.tmp, "fake_claude")
+            with open(exe, "w") as f:
+                f.write('#!/bin/sh\nexec "%s" "%s" "$@"\n' % (sys.executable, script))
+            os.chmod(exe, 0o755)
+        return exe
+
+    def test_claude_call_streams_and_reports_cost(self):
+        delta = lambda t: {"type": "stream_event", "event": {"type": "content_block_delta",
+                                                              "delta": {"type": "text_delta", "text": t}}}
+        exe = self.fake_cli([{"type": "system"}, delta("유죄"), delta("입니다"),
+                             {"type": "result", "is_error": False, "result": "유죄입니다",
+                              "usage": {"input_tokens": 12, "cache_read_input_tokens": 900,
+                                        "cache_creation_input_tokens": 0, "output_tokens": 4}}])
+        seen = []
+        c = court.claude_call(exe, None, "prompt", self.tmp, on_text=seen.append)
+        self.assertEqual(c["text"], "유죄입니다")
+        self.assertEqual(seen, ["유죄", "유죄입니다"])
+        self.assertEqual((c["input"], c["cache_read"], c["output"]), (12, 900, 4))
+        self.assertIsNotNone(c["first_text"])
+
+    def test_claude_call_reports_an_error_result(self):
+        exe = self.fake_cli([{"type": "result", "is_error": True, "result": "Not logged in · Please run /login"}])
+        with self.assertRaises(RuntimeError) as e:
+            court.claude_call(exe, None, "prompt", self.tmp)
+        self.assertIn("claude auth login", str(e.exception))
 
 if __name__ == "__main__":
     unittest.main()

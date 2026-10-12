@@ -469,28 +469,80 @@ def claude_logged_in(claude):
         return True  # can't tell; let the first question find out
 
 
-def claude_text(claude, model, prompt, cwd, timeout=600):
-    """One tool-less `claude -p` call: the prompt in, the reply text out."""
+def claude_call(claude, model, prompt, cwd, timeout=600, on_text=None):
+    """One tool-less `claude -p` call, streamed.
+
+    `on_text(reply_so_far)` runs as the reply grows. Returns the reply and what the call cost:
+    {"text", "seconds", "first_text" (seconds until the first words), "input", "cache_read",
+    "cache_write", "output"} (token counts).
+    """
     cmd = [claude, "-p", "--tools", "", "--strict-mcp-config", "--no-session-persistence",
-           "--output-format", "text"]
+           "--output-format", "stream-json", "--verbose", "--include-partial-messages"]
     if model:
         cmd += ["--model", model]
-    r = subprocess.run(cmd, input=prompt, capture_output=True, text=True, encoding="utf-8",
-                       errors="replace", timeout=timeout, env=child_env(), cwd=cwd)
-    out = (r.stdout or "").strip()
-    if r.returncode != 0 or not out:
-        err = (r.stderr or out or "exit code %d" % r.returncode).strip()
+    t0 = time.time()
+    p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                         encoding="utf-8", errors="replace", env=child_env(), cwd=cwd)
+    timer = threading.Timer(timeout, p.kill)
+    timer.start()
+    stderr = []
+    drain = threading.Thread(target=lambda: stderr.append(p.stderr.read()), daemon=True)
+    drain.start()
+    parts, result, first = [], None, None
+    try:
+        p.stdin.write(prompt)
+        p.stdin.close()
+        for line in p.stdout:
+            try:
+                ev = json.loads(line)
+            except ValueError:
+                continue
+            if ev.get("type") == "result":
+                result = ev
+            elif ev.get("type") == "stream_event":
+                delta = ev.get("event", {}).get("delta", {})
+                if delta.get("type") == "text_delta" and delta.get("text"):
+                    if first is None:
+                        first = time.time() - t0
+                    parts.append(delta["text"])
+                    if on_text:
+                        on_text("".join(parts))
+        p.wait()
+    except BaseException:
+        p.kill()
+        raise
+    finally:
+        timed_out = not timer.is_alive() and p.returncode not in (0, None)
+        timer.cancel()
+    drain.join(1)
+    result = result or {}
+    text = (result.get("result") if isinstance(result.get("result"), str) else "".join(parts)).strip()
+    if p.returncode != 0 or result.get("is_error") or not text:
+        err = "timed out after %ds" % timeout if timed_out else \
+            ("".join(stderr) or text or "exit code %s" % p.returncode).strip()
         if "not logged in" in err.lower() or "/login" in err:
             err = NOT_LOGGED_IN
         raise RuntimeError(err[:300])
-    return out
+    usage = result.get("usage") or {}
+    return {"text": text, "seconds": round(time.time() - t0, 1),
+            "first_text": round(first, 1) if first is not None else None,
+            "input": usage.get("input_tokens", 0), "cache_read": usage.get("cache_read_input_tokens", 0),
+            "cache_write": usage.get("cache_creation_input_tokens", 0), "output": usage.get("output_tokens", 0)}
+
+
+def cost_line(c):
+    """A one-line summary of a claude_call() result, for logs."""
+    first = " (first words %.1fs)" % c["first_text"] if c.get("first_text") is not None else ""
+    return "%.1fs%s, %d tokens in (%d cached), %d out" % (
+        c["seconds"], first, c["input"] + c["cache_read"] + c["cache_write"], c["cache_read"], c["output"])
 
 
 def answer_question(state, rec, claude, model, slots):
     """Answer one question with a tool-less `claude -p` call that sees only the trial record."""
     with slots:
         try:
-            rec.update(status="done", answer=claude_text(claude, model, ask_prompt(state, rec), state["dir"], 300))
+            c = claude_call(claude, model, ask_prompt(state, rec), state["dir"], 300)
+            rec.update(status="done", answer=c["text"], cost={k: v for k, v in c.items() if k != "text"})
         except Exception as e:
             rec.update(status="error", answer="답변을 받지 못했어요: %s" % e)
         rec["answered"] = time.strftime("%Y-%m-%dT%H:%M:%S")
@@ -543,9 +595,11 @@ def headless_prompt(state, phase, job):
     return text
 
 
-def set_runner(state, status, message="", phase=None):
+def set_runner(state, status, message="", phase=None, calls=None, seconds=None):
+    """runner.json: how a page-filed trial is going, and what each claude call cost."""
     write_json(os.path.join(state["dir"], "runner.json"),
-               {"status": status, "message": message, "phase": phase, "at": time.strftime("%Y-%m-%dT%H:%M:%S")})
+               {"status": status, "message": message, "phase": phase, "at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                "seconds": seconds, "calls": calls or {}})
 
 
 def run_trial(state, claude, model=None, log=print):
@@ -557,12 +611,17 @@ def run_trial(state, claude, model=None, log=print):
     """
     from concurrent.futures import ThreadPoolExecutor
 
+    t0 = time.time()
+    calls, lock = {}, threading.Lock()
+
     def run_job(phase, job):
         try:
-            out = claude_text(claude, model, headless_prompt(state, phase, job), state["dir"])
+            c = claude_call(claude, model, headless_prompt(state, phase, job), state["dir"])
             with open(job["output"], "w", encoding="utf-8") as f:
-                f.write(out + "\n")
-            log("court: %s %s done" % (phase, job["id"]))
+                f.write(c["text"] + "\n")
+            with lock:
+                calls["%s/%s" % (phase, job["id"])] = {k: v for k, v in c.items() if k != "text"}
+            log("court: %s %s done in %s" % (phase, job["id"], cost_line(c)))
         except Exception as e:
             log("court: %s %s failed: %s" % (phase, job["id"], e))
             return str(e)
@@ -577,7 +636,7 @@ def run_trial(state, claude, model=None, log=print):
                 todo = missing(state, phase)
                 if not todo:
                     break
-                set_runner(state, "running", "", phase)
+                set_runner(state, "running", "", phase, calls, round(time.time() - t0, 1))
                 for j in jobs(state, phase):
                     with open(j["brief"], "w", encoding="utf-8") as f:
                         f.write(brief_text(state, phase, j))
@@ -594,10 +653,11 @@ def run_trial(state, claude, model=None, log=print):
                 stage = {"opening": "모두진술", "rebuttal": "반박", "judge": "판결"}[phase]
                 raise RuntimeError("%s 단계에서 %s의 답을 받지 못했어요: %s" % (stage, who, reason))
         render(state)
-        set_runner(state, "done")
-        log("court: the trial is over: %s" % verdict_line(count_votes(state)))
+        seconds = round(time.time() - t0, 1)
+        set_runner(state, "done", "", None, calls, seconds)
+        log("court: the trial is over in %.0fs: %s" % (seconds, verdict_line(count_votes(state))))
     except Exception as e:
-        set_runner(state, "error", str(e)[:300])
+        set_runner(state, "error", str(e)[:300], None, calls, round(time.time() - t0, 1))
         log("court: the trial stopped: %s" % e)
 
 
