@@ -1,0 +1,10 @@
+/* Question box under the stage. */
+.ask{display:none;gap:6px;padding:0 12px 10px;flex-wrap:wrap}
+.ask.on{display:flex}
+.ask select,.ask input{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);border-radius:8px;padding:7px 8px;min-width:0}
+.ask select{flex:0 1 auto;max-width:44%}
+.ask input{flex:1 1 140px}
+.ask input:focus,.ask select:focus{outline:2px solid var(--gold);outline-offset:1px}
+.ask button{flex:0 0 auto}
+.ask-note{font-size:11px;color:var(--muted);padding:0 14px 10px;margin:0}
+.ask-note:empty{display:none}

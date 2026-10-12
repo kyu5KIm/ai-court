@@ -1,0 +1,10 @@
+/* Page reset, body, the page wrapper and shared button styles. */
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1200px;margin:0 auto;padding:20px 16px 48px;overflow-x:clip}
+button{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:7px 10px;cursor:pointer;white-space:nowrap}
+button:hover:not(:disabled){border-color:var(--wood-hi)}
+button.primary{background:var(--wood);border-color:var(--wood);color:#fff;flex:1}
+button:disabled{opacity:.45;cursor:default}
+button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}

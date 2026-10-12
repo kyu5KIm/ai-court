@@ -1,0 +1,55 @@
+/* Transcript: intro card, messages, juror cards, verdict card, questions and answers. */
+/* ---------- transcript ---------- */
+.log{display:flex;flex-direction:column;gap:14px;min-width:0}
+.intro{align-self:stretch;text-align:center;padding:30px 20px;border:1px dashed var(--line);border-radius:16px;background:var(--panel)}
+.intro .cast{display:flex;justify-content:center;align-items:flex-end;gap:14px;margin-bottom:6px}
+.intro .cast svg{width:44px;height:44px}
+.intro .cast svg.big{width:56px;height:56px}
+.intro h2{font-family:var(--serif);font-size:15px;color:var(--muted);font-weight:600;margin:10px 0 4px;letter-spacing:.1em}
+.intro .case{font-family:var(--serif);font-size:clamp(17px,2.2vw,21px);margin:0 auto 6px;max-width:40ch}
+.intro .meta{font-size:12px;color:var(--muted);margin:0 0 18px}
+.intro button{font-size:15px;padding:10px 22px}
+.intro .hint{font-size:12px;color:var(--muted);margin:14px 0 0}
+.intro.started button,.intro.started .hint{display:none}
+.msg{max-width:min(640px,88%);background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 16px 14px;box-shadow:var(--shadow);animation:pop .35s ease-out both;scroll-margin:24px}
+.msg.left{align-self:flex-start;border-left:4px solid var(--pros);border-top-left-radius:4px}
+.msg.right{align-self:flex-end;border-right:4px solid var(--def);border-top-right-radius:4px}
+.msg.center{align-self:center;max-width:min(660px,96%);background:var(--panel-2)}
+.msg header{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px;flex-wrap:wrap}
+.msg.right header{flex-direction:row-reverse}
+.msg header .av{width:26px;height:26px;flex:none;display:block}
+.msg header .av svg{width:100%;height:100%;display:block}
+.tag{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:0 8px}
+.body{font-size:15px}
+.body p{margin:0 0 .6em} .body>:last-child{margin-bottom:0}
+.body ol,.body ul{margin:.2em 0 .6em;padding-left:1.35em} .body li{margin:.3em 0}
+.body h4{font-family:var(--serif);font-size:16px;margin:1em 0 .3em}
+.body h4:first-child{margin-top:0}
+.body h4 .en{font-family:var(--sans);font-size:11px;color:var(--muted);font-weight:400;margin-left:6px}
+.body blockquote{margin:.4em 0 .7em;padding:6px 12px;border-left:3px solid var(--gold);background:var(--panel);border-radius:4px}
+.body code{font-family:Consolas,ui-monospace,monospace;font-size:.9em;background:var(--panel-2);padding:0 4px;border-radius:4px}
+.muted{color:var(--muted)}
+.pending{display:none}
+.shown{animation:fadein .45s ease-out both}
+.msg.typing .body::after{content:"";display:block;width:30px;height:8px;margin-top:8px;opacity:.55;
+  background:radial-gradient(circle,var(--muted) 2.5px,transparent 3px) 0 0/10px 8px repeat-x;animation:blink 1s infinite}
+.msg.juror{align-self:center;max-width:min(560px,94%);border-top:3px solid var(--muted)}
+.msg.juror.g{border-top-color:var(--pros)} .msg.juror.n{border-top-color:var(--ng)}
+.vote{font-weight:700;font-size:12px;padding:1px 10px;border-radius:999px;color:#fff;background:var(--muted);margin-left:auto}
+.vote.g{background:var(--pros)} .vote.n{background:var(--ng)}
+.lens{font-size:12px;color:var(--muted);margin:-2px 0 8px}
+.line{display:grid;grid-template-columns:76px 1fr;gap:8px;font-size:14px;margin:5px 0}
+.line .k{color:var(--muted);font-size:12px;padding-top:2px}
+.verdict{align-self:stretch;text-align:center;border-radius:16px;padding:22px 16px 20px;color:#fff;background:var(--muted);box-shadow:var(--shadow);animation:stampin .6s cubic-bezier(.2,.9,.3,1.3) both}
+.verdict.g{background:#9c2a22} .verdict.n{background:#2e6e48}
+.verdict .lead{font-size:13px;opacity:.85;letter-spacing:.1em}
+.verdict .v{font-family:var(--serif);font-size:clamp(42px,7vw,66px);font-weight:800;letter-spacing:.1em;line-height:1.15;margin:4px 0}
+.verdict .count{font-size:15px;opacity:.92}
+.msg.user{align-self:flex-end;max-width:min(520px,84%);background:var(--def-bg);border-color:transparent;border-top-right-radius:4px}
+.msg.user header{flex-direction:row-reverse}
+.msg.answer{border-top:3px solid var(--gold)}
+.msg.answer.err .body{color:var(--muted)}
+.past{align-self:stretch;border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:8px 14px}
+.past summary{cursor:pointer;font-size:13px;color:var(--muted)}
+.past[open] summary{margin-bottom:10px}
+.past .qa{display:flex;flex-direction:column;gap:10px;margin-bottom:10px}

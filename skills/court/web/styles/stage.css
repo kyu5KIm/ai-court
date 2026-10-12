@@ -1,0 +1,49 @@
+/* The courtroom scene: walls, furniture, gavel, score, verdict stamp, live status. */
+/* ---------- stage ---------- */
+.stage{position:sticky;top:16px;background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+.scene{--h:380px;--s:46px;--walk:1100ms;position:relative;height:var(--h);overflow:hidden;
+  background:linear-gradient(var(--wall) 0 40%,var(--floor) 40% 100%)}
+.scene.shake{animation:shake .4s ease-in-out 2}
+.scene::before{content:"";position:absolute;left:0;right:0;top:40%;bottom:0;
+  background:repeating-linear-gradient(90deg,transparent 0 58px,var(--floor-2) 58px 60px)}
+.wall-trim{position:absolute;left:0;right:0;top:calc(40% - 6px);height:6px;background:var(--wood)}
+.emblem{position:absolute;left:50%;top:3%;width:15%;aspect-ratio:1;transform:translateX(-50%);border-radius:50%;
+  border:3px solid var(--gold);display:grid;place-items:center;font-size:calc(var(--s)*.5);color:var(--gold);background:var(--wall-2);opacity:.9}
+.curtain{position:absolute;top:0;height:40%;width:9%;background:repeating-linear-gradient(90deg,#8a2a22 0 8px,#7a221c 8px 16px);opacity:.85}
+.curtain.l{left:0} .curtain.r{right:0}
+.furn{position:absolute;transform:translateX(-50%);border-radius:4px 4px 0 0;
+  background:linear-gradient(var(--wood-hi),var(--wood));box-shadow:inset 0 -4px 0 var(--wood-dk);display:flex;justify-content:center;align-items:flex-start}
+.plate{margin-top:4px;font-size:10px;line-height:1.5;padding:0 6px;border-radius:3px;background:var(--gold);color:#2a1d0c;font-weight:700;white-space:nowrap}
+.bench{left:50%;top:27%;width:44%;height:14%;z-index:11}
+.clerk-desk{left:25%;top:35%;width:13%;height:7%;z-index:15}
+.table{top:56%;width:24%;height:9%;z-index:31}
+.table.pros{left:15%} .table.def{left:85%}
+.table.pros .plate{background:var(--pros);color:#fff} .table.def .plate{background:var(--def);color:#fff}
+.lectern{left:50%;top:58%;width:10%;height:10%;z-index:33;border-radius:6px 6px 0 0}
+.jurybox{position:absolute;left:3%;right:3%;bottom:0;border-radius:10px 10px 0 0;background:var(--jury);opacity:.75}
+.rail{position:absolute;left:3%;right:3%;bottom:0;height:5%;background:linear-gradient(var(--wood-hi),var(--wood));z-index:45;border-radius:3px 3px 0 0}
+.rail span{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:9px;color:#fff;opacity:.8;letter-spacing:.1em;white-space:nowrap}
+.gavel{position:absolute;left:62%;top:27%;width:calc(var(--s)*.95);height:calc(var(--s)*.95);transform:translate(-50%,-92%);z-index:12}
+.gavel .arm{transform-box:view-box;transform-origin:52px 22px;transform:rotate(12deg)}
+.gavel .arm rect{fill:#f3e3c7} .gavel .arm rect:first-child{fill:#c99a62}
+.gavel .block{fill:var(--wood-dk)}
+.gavel.strike .arm{animation:strike 1.1s ease-in both}
+.score{position:absolute;left:10px;top:10px;z-index:50;display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
+  background:rgba(255,253,248,.92);border:1px solid var(--line);font-size:11px;color:#74685a}
+.score b{font-family:var(--serif);font-size:17px;line-height:1;font-variant-numeric:tabular-nums}
+.score .g{color:#b3261e} .score .n{color:#2e7d4f}
+.score b.bump{animation:bump .5s ease-out}
+.stamp{position:absolute;left:50%;top:50%;z-index:60;transform:translate(-50%,-50%) rotate(-8deg) scale(1.6);opacity:0;pointer-events:none;
+  text-align:center;white-space:nowrap;padding:8px 22px;border:5px solid currentColor;border-radius:10px;color:#b3261e;background:rgba(255,253,248,.9);
+  transition:transform .45s cubic-bezier(.2,.9,.3,1.3),opacity .3s,left .6s,top .6s}
+.stamp.n{color:#2e7d4f} .stamp.h{color:#74685a}
+.stamp b{display:block;font-family:var(--serif);font-size:calc(var(--h)*.13);line-height:1.1;letter-spacing:.1em}
+.stamp span{font-size:13px;font-weight:700}
+.stamp.on{opacity:1;transform:translate(-50%,-50%) rotate(-8deg) scale(1)}
+.stamp.parked{left:84%;top:14%;transform:translate(-50%,-50%) rotate(-8deg) scale(.42)}
+/* live + questions */
+.status{position:absolute;left:10px;top:44px;z-index:50;display:none;align-items:center;gap:6px;max-width:62%;padding:3px 10px;border-radius:999px;
+  background:rgba(255,253,248,.92);border:1px solid var(--line);font-size:11px;color:#5a4f42}
+.status.on{display:flex}
+.status i{width:7px;height:7px;border-radius:50%;background:#d33;flex:none;animation:blink 1.2s infinite}
+.status.off i{background:#999;animation:none}

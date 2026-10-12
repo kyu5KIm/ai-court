@@ -1,0 +1,11 @@
+/* Speech bubble over the speaking character. */
+.bubble{position:absolute;z-index:55;max-width:min(72%,300px);padding:7px 10px;border-radius:10px;background:#fffdf7;color:#2a2118;
+  font-size:12.5px;line-height:1.5;box-shadow:0 4px 14px rgba(0,0,0,.18);border:1.5px solid #2a2118;
+  opacity:0;transform:scale(.9);transition:opacity .2s,transform .2s;pointer-events:none}
+.bubble.on{opacity:1;transform:none}
+.bubble-tail{position:absolute;z-index:56;width:12px;height:12px;background:#fffdf7;border:1.5px solid #2a2118;border-top:0;border-left:0;
+  transform:rotate(45deg);opacity:0;transition:opacity .2s;pointer-events:none}
+.bubble-tail.on{opacity:1}
+.bubble-tail.up{transform:rotate(225deg)}
+.bubble.pros,.bubble-tail.pros{border-color:#b3261e}
+.bubble.def,.bubble-tail.def{border-color:#1f5fa8}

@@ -1,0 +1,17 @@
+/* Phone layout: the stage pins to the top and shrinks. */
+@media (max-width:860px){
+  .layout{grid-template-columns:1fr;gap:16px}
+  .stage{top:0;margin:0 -16px;border-radius:0 0 14px 14px;border-top:0;z-index:5}
+  .scene{--h:250px;--s:31px}
+  .plate{font-size:9px;margin-top:2px;padding:0 4px}
+  .bubble{font-size:11.5px;padding:5px 8px}
+  .score{left:6px;top:6px;padding:2px 8px}
+  .score b{font-size:14px}
+  .now{display:none}
+  .controls{padding:8px 10px}
+  .ask{padding:0 10px 8px}
+  .ask-note{padding:0 12px 8px}
+  .status{left:6px;top:32px;padding:2px 8px}
+  .msg{max-width:94%;scroll-margin-top:calc(var(--stage-h,320px) + 12px)}
+  .curtain{width:7%}
+}

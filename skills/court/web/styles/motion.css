@@ -1,0 +1,17 @@
+/* Keyframes and the reduced-motion switch. */
+@keyframes pop{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@keyframes blink{50%{opacity:.15}}
+@keyframes blinkeye{0%,94%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+@keyframes bob{50%{transform:translateY(-7%)}}
+@keyframes legs{0%{transform:translateY(0)}50%{transform:translateY(-1px)}}
+@keyframes talk{50%{transform:translateY(.6px) scaleX(1.02)}}
+@keyframes hop{30%{transform:translateY(-38%)}60%{transform:translateY(0)}78%{transform:translateY(-10%)}100%{transform:translateY(0)}}
+@keyframes thinkfloat{50%{transform:translateY(-3px)}}
+@keyframes bump{40%{transform:scale(1.4)}}
+@keyframes stampin{from{opacity:0;transform:scale(1.5)}to{opacity:1;transform:none}}
+@keyframes shake{25%{transform:translate(-3px,1px)}75%{transform:translate(3px,-1px)}}
+@keyframes strike{0%{transform:rotate(12deg)}25%{transform:rotate(34deg)}40%{transform:rotate(-30deg)}55%{transform:rotate(16deg)}75%{transform:rotate(-30deg)}100%{transform:rotate(-22deg)}}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}

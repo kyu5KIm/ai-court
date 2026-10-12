@@ -1,0 +1,19 @@
+/* New-case dialog. */
+dialog#newcase{border:1px solid var(--line);border-radius:16px;background:var(--panel);color:var(--ink);padding:0;
+  width:min(560px,calc(100vw - 32px));max-height:calc(100vh - 32px);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+dialog#newcase::backdrop{background:rgba(20,14,8,.55)}
+#nc-form{padding:20px 20px 16px;display:flex;flex-direction:column;gap:10px}
+#nc-form h2{font-family:var(--serif);margin:0;font-size:20px}
+.nc-hint{margin:0;font-size:13px;color:var(--muted)}
+.nc-tips{margin:0;padding-left:1.2em;font-size:13px;color:var(--muted);columns:2;column-gap:24px}
+#nc-case{font:inherit;font-size:14px;line-height:1.6;border:1px solid var(--line);border-radius:10px;padding:10px 12px;
+  background:var(--panel-2);color:var(--ink);resize:vertical;min-height:150px}
+.nc-row{display:flex;gap:10px;flex-wrap:wrap}
+.nc-row label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);flex:1 1 160px}
+.nc-row select,.nc-row input{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:7px 8px;background:var(--panel-2);color:var(--ink)}
+#nc-case:focus,.nc-row select:focus,.nc-row input:focus{outline:2px solid var(--gold);outline-offset:1px}
+.nc-err{margin:0;font-size:12px;color:var(--pros)}
+.nc-err:empty{display:none}
+.nc-actions{display:flex;gap:8px;justify-content:flex-end}
+.nc-actions .primary{flex:0 0 auto}
+@media (max-width:520px){ .nc-tips{columns:1} }

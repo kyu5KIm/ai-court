@@ -1,0 +1,4 @@
+/* Now-playing line and the player controls under the stage. */
+.now{display:flex;align-items:center;gap:8px;min-height:40px;padding:9px 16px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+.now b{color:var(--ink);font-weight:600}
+.controls{display:flex;gap:6px;padding:10px 12px 12px;border-top:1px solid var(--line)}
