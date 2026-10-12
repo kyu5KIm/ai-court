@@ -28,6 +28,7 @@ import threading
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+WEB = os.path.join(HERE, "web")
 ROOT = ".court"
 LATEST = os.path.join(ROOT, "LATEST")
 PHASES = ["opening", "rebuttal", "jury", "judge"]
@@ -295,16 +296,53 @@ def write_json(path, obj):
     os.replace(path + ".tmp", path)
 
 
+# The courtroom page lives in web/ as plain files: index.html, styles/*.css and ES modules under js/.
+# There is no build step. page_html() inlines the stylesheets and joins the module graph into one
+# classic script, so the live server and the saved trial.html are both a single self-contained page.
+LINK_RE = re.compile(r'<link rel="stylesheet" href="([^"]+)">')
+MODULE_RE = re.compile(r'<script type="module" src="([^"]+)"></script>')
+IMPORT_RE = re.compile(r'^import \{[^}]*\} from "(\.{1,2}/[^"]+)";[ \t]*\n', re.M)
+EXPORT_RE = re.compile(r"^export (?=(?:async )?function |const |let |class )", re.M)
+
+
+def bundle_js(entry):
+    """Join an ES module graph into one script, dependencies first.
+
+    Modules must stick to single-line `import { a, b } from "./x.js";` and `export function/const/let/class`.
+    Every top-level name shares one scope after joining, so names must be unique across modules.
+    """
+    order, seen = [], set()
+
+    def visit(path):
+        path = os.path.normpath(path)
+        if path in seen:
+            return
+        seen.add(path)
+        for rel in IMPORT_RE.findall(read_text(path)):
+            visit(os.path.join(os.path.dirname(path), rel))
+        order.append(path)
+
+    visit(entry)
+    parts = []
+    for path in order:
+        src = EXPORT_RE.sub("", IMPORT_RE.sub("", read_text(path)))
+        if re.search(r"^\s*(import|export)\b", src, re.M):
+            raise ValueError("court: %s uses an import/export the page bundler cannot join" % path)
+        parts.append("// %s\n%s" % (os.path.relpath(path, WEB).replace(os.sep, "/"), src.strip()))
+    return '(function () {\n"use strict";\n' + "\n\n".join(parts) + "\n})();"
+
+
 def page_html(data):
-    template = os.path.join(HERE, "trial.html")
-    # "<" never appears raw inside the <script> block, so no statement can close it early.
+    # "<" never appears raw inside the data block, so no statement can close it early or look like a tag.
     blob = json.dumps(data, ensure_ascii=False).replace("<", "\\u003c")
-    return read_text(template).replace("__COURT_DATA__", blob, 1)
+    html = read_text(os.path.join(WEB, "index.html")).replace("__COURT_DATA__", blob, 1)
+    html = LINK_RE.sub(lambda m: "<style>\n%s\n</style>" % read_text(os.path.join(WEB, m.group(1))).strip(), html)
+    return MODULE_RE.sub(lambda m: "<script>\n%s\n</script>" % bundle_js(os.path.join(WEB, m.group(1))), html)
 
 
 def write_trial(state):
     """Write trial.html next to VERDICT.md: the whole trial replayed as a courtroom."""
-    if not os.path.exists(os.path.join(HERE, "trial.html")):
+    if not os.path.exists(os.path.join(WEB, "index.html")):
         return None
     out = os.path.join(state["dir"], "trial.html")
     with open(out, "w", encoding="utf-8") as f:
