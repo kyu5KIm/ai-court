@@ -1,0 +1,4 @@
+/* The small tool buttons in the header: theme, print, shortcuts, past trials, retrial, language. */
+.tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.tool{font-size:12px;padding:5px 11px;border-radius:999px;min-width:32px}
+.tool[aria-pressed="true"]{background:var(--wood);border-color:var(--wood);color:#fff}

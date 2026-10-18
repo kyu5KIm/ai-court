@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="styles/base.css">
 <link rel="stylesheet" href="styles/layout.css">
 <link rel="stylesheet" href="styles/header.css">
+<link rel="stylesheet" href="styles/tools.css">
 <link rel="stylesheet" href="styles/stage.css">
 <link rel="stylesheet" href="styles/characters.css">
 <link rel="stylesheet" href="styles/bubble.css">
@@ -17,6 +18,7 @@
 <link rel="stylesheet" href="styles/transcript.css">
 <link rel="stylesheet" href="styles/motion.css">
 <link rel="stylesheet" href="styles/responsive.css">
+<link rel="stylesheet" href="styles/print.css">
 </head>
 <body>
 <div class="wrap">
@@ -26,7 +28,12 @@
       <h1 id="case-title"></h1>
     </div>
     <ol class="phases" id="phases"></ol>
-    <button class="newcase" id="b-new" hidden>＋ 새 사건</button>
+    <div class="tools" id="tools">
+      <button class="tool" id="b-theme" type="button">◐</button>
+      <button class="tool" id="b-print" type="button" title="판결문 인쇄">인쇄</button>
+      <button class="tool" id="b-help" type="button" title="단축키 (?)" aria-label="단축키">?</button>
+      <button class="newcase" id="b-new" type="button" hidden>＋ 새 사건</button>
+    </div>
   </header>
 
   <div class="layout">
@@ -73,7 +80,21 @@
   <footer class="foot" id="foot"></footer>
 </div>
 
-<dialog id="newcase" aria-labelledby="nc-title">
+<dialog id="help" class="sheet" aria-labelledby="help-title">
+  <div class="sheet-body">
+    <h2 id="help-title">단축키</h2>
+    <table class="keys">
+      <tr><td><kbd>Space</kbd></td><td>재생 / 멈춤</td></tr>
+      <tr><td><kbd>→</kbd></td><td>다음 장면 (지금 장면은 바로 끝까지)</td></tr>
+      <tr><td><kbd>Home</kbd></td><td>처음부터</td></tr>
+      <tr><td><kbd>?</kbd></td><td>이 도움말</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>열린 창 닫기</td></tr>
+    </table>
+    <div class="sheet-actions"><button type="button" class="primary" id="help-close">닫기</button></div>
+  </div>
+</dialog>
+
+<dialog id="newcase" class="sheet" aria-labelledby="nc-title">
   <form id="nc-form">
     <h2 id="nc-title">새 사건 접수</h2>
     <p class="nc-hint">검사, 변호인, 배심원은 여기 적힌 내용만 알아요. 숫자로 적을수록 평결이 구체적이에요.</p>

@@ -5,6 +5,7 @@ import { $ } from "../core/dom.js";
 import { esc } from "../core/markdown.js";
 import { clock, walkMs, nextSpeed } from "../core/clock.js";
 import { step, setPlaying, restart, showAll } from "./player.js";
+import { openHelp } from "../ui/help.js";
 
 /** Bring the button labels in line with the player. */
 export function sync() {
@@ -48,5 +49,6 @@ export function bindControls() {
     if (e.key === " ") { e.preventDefault(); togglePlay(); }
     else if (e.key === "ArrowRight") { e.preventDefault(); step(true); }
     else if (e.key === "Home") { e.preventDefault(); restart(); }
+    else if (e.key === "?") { e.preventDefault(); openHelp(); }
   });
 }

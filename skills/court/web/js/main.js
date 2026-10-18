@@ -13,11 +13,15 @@ import { waitingFx } from "./live/status.js";
 import { setupAsk } from "./live/questions.js";
 import { setupNewCase } from "./live/newCase.js";
 import { startPolling } from "./live/poll.js";
+import { setupTheme } from "./ui/theme.js";
+import { setupHelp } from "./ui/help.js";
+import { setupPrint } from "./ui/print.js";
 
 function boot() {
   app.data = JSON.parse($("#court-data").textContent);
   app.token = app.data.token || "";
 
+  setupTheme();
   renderHeader();
   buildCast();
   player.scenes = buildScenes();
@@ -27,6 +31,8 @@ function boot() {
   setSpeed(1);
   setupAsk();
   setupNewCase();
+  setupHelp();
+  setupPrint();
   liveBadge();
   waitingFx();
   watchLayout();

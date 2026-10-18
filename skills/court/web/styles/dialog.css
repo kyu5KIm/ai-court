@@ -1,7 +1,13 @@
-/* New-case dialog. */
-dialog#newcase{border:1px solid var(--line);border-radius:16px;background:var(--panel);color:var(--ink);padding:0;
+/* Dialogs ("sheets"): new case, shortcuts, past trials, comparison. */
+dialog.sheet{border:1px solid var(--line);border-radius:16px;background:var(--panel);color:var(--ink);padding:0;
   width:min(560px,calc(100vw - 32px));max-height:calc(100vh - 32px);box-shadow:0 20px 60px rgba(0,0,0,.35)}
-dialog#newcase::backdrop{background:rgba(20,14,8,.55)}
+dialog.sheet::backdrop{background:rgba(20,14,8,.55)}
+.sheet-body{padding:20px 20px 16px;display:flex;flex-direction:column;gap:12px}
+.sheet-body h2{font-family:var(--serif);margin:0;font-size:20px}
+.sheet-actions{display:flex;gap:8px;justify-content:flex-end}
+.sheet-actions .primary{flex:0 0 auto}
+
+/* New-case dialog. */
 #nc-form{padding:20px 20px 16px;display:flex;flex-direction:column;gap:10px}
 #nc-form h2{font-family:var(--serif);margin:0;font-size:20px}
 .nc-hint{margin:0;font-size:13px;color:var(--muted)}
@@ -17,3 +23,10 @@ dialog#newcase::backdrop{background:rgba(20,14,8,.55)}
 .nc-actions{display:flex;gap:8px;justify-content:flex-end}
 .nc-actions .primary{flex:0 0 auto}
 @media (max-width:520px){ .nc-tips{columns:1} }
+
+/* Shortcut sheet. */
+.keys{border-collapse:collapse;font-size:14px}
+.keys td{padding:6px 10px 6px 0;border-bottom:1px solid var(--line)}
+.keys tr:last-child td{border-bottom:0}
+kbd{font-family:Consolas,ui-monospace,monospace;font-size:12px;padding:2px 7px;border:1px solid var(--line);border-bottom-width:2px;
+  border-radius:6px;background:var(--panel-2)}
