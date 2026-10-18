@@ -169,7 +169,7 @@ const STR = {
   langSwitch: ["EN", "한"],
   langTitle: ["Switch to English", "한국어로 보기"],
   // static page text (index.html, data-i18n)
-  kicker: ["COURT · AI 법정", "COURT · AI Court"],
+  kicker: ["COURT", "COURT"],
   courtroom: ["법정", "Courtroom"],
   benchPlate: ["판사", "Judge"],
   clerkPlate: ["서기", "Clerk"],

@@ -14,7 +14,8 @@ export function caseTitle() {
 
 export function renderHeader() {
   const d = app.data;
-  $("#case-title").textContent = caseTitle();
+  // The page is always titled "AI 법정"; the case itself opens the transcript (intro card).
+  $("#case-title").textContent = t("appName");
   $("#phases").innerHTML = PHASE_NAMES.map((p) => "<li>" + p + "</li>").join("");
   $("#foot").innerHTML = t("footFolder") + esc(d.dir) + (d.seed != null ? t("footSeed") + esc(d.seed) : "") +
     '<br>Made with <a href="https://github.com/alexyc9381/court-skill">/court</a>, a free Claude Code skill by Alex Chen (@nocodealex).';
