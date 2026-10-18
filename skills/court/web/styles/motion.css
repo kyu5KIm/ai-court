@@ -1,4 +1,5 @@
 /* Keyframes and the reduced-motion switch. */
+@keyframes flash{0%,45%{box-shadow:0 0 0 4px var(--gold)}100%{box-shadow:var(--shadow)}}
 @keyframes pop{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
 @keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 @keyframes blink{50%{opacity:.15}}

@@ -4,6 +4,7 @@ import { app, player } from "./core/state.js";
 import { $ } from "./core/dom.js";
 import { renderHeader, setPhase, liveBadge } from "./header/header.js";
 import { buildCast } from "./stage/cast.js";
+import { setupCharacterPick } from "./stage/pick.js";
 import { watchLayout } from "./stage/layout.js";
 import { buildScenes } from "./player/scenes.js";
 import { setPlaying } from "./player/player.js";
@@ -25,6 +26,7 @@ function boot() {
   setupTheme();
   renderHeader();
   buildCast();
+  setupCharacterPick();
   player.scenes = buildScenes();
   renderIntro();
   setPhase(-1);

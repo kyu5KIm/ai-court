@@ -35,6 +35,7 @@ function addQA(q, fresh, parent) {
     '<div class="body"><p>' + inline(q.q) + "</p></div>";
   const a = document.createElement("article");
   a.className = "msg center answer typing";
+  a.dataset.actor = q.who;
   a.innerHTML = "<header>" + avatar(q.who) + "<b>" + esc(whoName(q.who)) +
     '</b><span class="tag">답변</span></header><div class="body"></div>';
   box.appendChild(u);
