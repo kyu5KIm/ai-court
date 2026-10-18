@@ -1,5 +1,7 @@
 # AI 법정 · court-skill 한국어판
 
+**한국어** | [English](README.en.md)
+
 > [alexyc9381/court-skill](https://github.com/alexyc9381/court-skill)을 고친 버전이에요.
 > 원작자는 **Alex Chen** ([@nocodealex](https://instagram.com/nocodealex))이고, MIT 라이선스를 따라요.
 > 원작의 재판 방식(검사, 변호인, 서로 표를 못 보는 배심원, 판사)은 그대로 두고, 한국어 환경과 웹 법정 화면을 더했어요.
@@ -198,31 +200,4 @@ rm -rf ~/.claude/skills/court
 
 ---
 
-## English
-
-A modified version of [alexyc9381/court-skill](https://github.com/alexyc9381/court-skill) by Alex Chen (MIT). The trial
-itself is unchanged. This version adds:
-
-- **UTF-8 everywhere.** Upstream reads files with the OS default encoding, which crashes on non-ASCII case
-  files on Windows with a non-UTF-8 locale (for example Korean, cp949).
-- **A courtroom page** (`skills/court/web/`): pixel characters walk to the lectern, jurors raise vote
-  signs, the gavel falls. `render` saves a replay next to `VERDICT.md`. The page is plain files with no
-  build step: stylesheets in `web/styles/` and ES modules by feature in `web/js/` (core, header, stage,
-  player, transcript, live). `court.py` inlines the CSS and joins the modules into one script when it
-  serves or saves the page, so neither users nor contributors need Node.js.
-- **`court.py serve`**: a local server (127.0.0.1 only, token-checked) that follows the trial live, takes
-  questions for any participant, and can open a new case from the page. Page-filed trials and questions run
-  through tool-less `claude -p` calls, so they need the `claude` CLI logged in.
-- **`court.py run`**: run the latest trial headless with `claude -p`.
-- **Faster, lighter page-filed trials.** Calls stream, so statements, the judgment and question answers
-  show as drafts while they are written. They use a short system prompt in place of Claude Code's default
-  one (about 9,100 tokens less per call), `--jury-model` (or the dialog) runs jurors on a faster model,
-  `--parallel` sets how many calls run at once, and runner.json records each call's time and tokens.
-- **Page extras**: a scene timeline, click-a-character, suggested questions, past trials with a
-  side-by-side comparison, a retrial button (conditions for acquittal attached, same jury), a cost and
-  time panel with an estimate of the time left, a vote map by juror group, verdict image export,
-  print layout, light/dark switch, optional sound effects and an English page.
-- Sub-agents are told to write in the language of the case file.
-
-The page text is Korean, with an English switch (EN). Tested on Windows 11 only. Not made by or affiliated with Anthropic; the pixel
-characters are this repository's own fan design.
+English: [README.en.md](README.en.md)
