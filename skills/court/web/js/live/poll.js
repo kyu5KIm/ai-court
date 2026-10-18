@@ -9,6 +9,7 @@ import { syncQuestions } from "./questions.js";
 import { waitingFx } from "./status.js";
 import { updateDraft } from "./draft.js";
 import { renderChips } from "./chips.js";
+import { renderCost } from "./cost.js";
 
 async function pollOnce() {
   try {
@@ -19,6 +20,7 @@ async function pollOnce() {
     mergeScenes();
     syncQuestions();
     renderChips();
+    renderCost();
     liveBadge();
     updateDraft();
   } catch (e) {

@@ -3,7 +3,7 @@
   :root:root:root{--bg:#fff;--panel:#fff;--panel-2:#fff;--ink:#000;--muted:#444;--line:#bbb}
   body{background:#fff}
   .wrap{max-width:none;padding:0}
-  .stage,.tools,.phases,.intro,.past,.msg.draft,dialog,.kicker .live{display:none!important}
+  .stage,.tools,.phases,.intro,.past,.msg.draft,dialog,.kicker .live,.cost{display:none!important}
   .layout{display:block}
   .msg,.verdict{box-shadow:none;max-width:none;animation:none;break-inside:avoid;margin-bottom:10px}
   .msg.left,.msg.right,.msg.center,.msg.juror{align-self:stretch}

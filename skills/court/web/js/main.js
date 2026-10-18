@@ -14,6 +14,7 @@ import { renderIntro } from "./transcript/intro.js";
 import { waitingFx } from "./live/status.js";
 import { setupAsk } from "./live/questions.js";
 import { setupChips } from "./live/chips.js";
+import { renderCost } from "./live/cost.js";
 import { setupNewCase } from "./live/newCase.js";
 import { startPolling } from "./live/poll.js";
 import { setupTheme } from "./ui/theme.js";
@@ -38,6 +39,7 @@ function boot() {
   setSpeed(1);
   setupAsk();
   setupChips();
+  renderCost();
   setupNewCase();
   setupHelp();
   setupPrint();

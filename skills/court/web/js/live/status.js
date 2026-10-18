@@ -5,6 +5,7 @@ import { $ } from "../core/dom.js";
 import { WAIT_KO } from "../core/constants.js";
 import { cast } from "../stage/cast.js";
 import { setNow } from "../player/controls.js";
+import { etaText } from "./cost.js";
 
 export function waitingFx() {
   const st = $("#status"), d = app.data;
@@ -17,7 +18,10 @@ export function waitingFx() {
   if (!waitingForMore()) { st.classList.remove("on"); return; }
   st.classList.add("on");
   st.classList.toggle("off", !app.online);
-  st.querySelector("span").textContent = app.online ? (WAIT_KO[d.phase] || "재판 진행 중") + "…" : "서버와 연결이 끊겼어요";
+  const eta = etaText();
+  st.querySelector("span").textContent = app.online
+    ? (WAIT_KO[d.phase] || "재판 진행 중") + "…" + (eta ? " · " + eta : "")
+    : "서버와 연결이 끊겼어요";
   // Only while the replay has caught up with the record.
   if (player.cur || player.idx < player.scenes.length) return;
   if (d.phase === "opening" || d.phase === "rebuttal") {
