@@ -22,6 +22,7 @@ import { setupHelp } from "./ui/help.js";
 import { setupPrint } from "./ui/print.js";
 import { setupSound } from "./ui/sound.js";
 import { setupSwipe } from "./ui/swipe.js";
+import { setupShare } from "./ui/share.js";
 
 function boot() {
   app.data = JSON.parse($("#court-data").textContent);
@@ -45,6 +46,7 @@ function boot() {
   setupPrint();
   setupSound();
   setupSwipe();
+  setupShare();
   liveBadge();
   waitingFx();
   watchLayout();

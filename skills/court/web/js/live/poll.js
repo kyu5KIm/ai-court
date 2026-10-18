@@ -10,6 +10,7 @@ import { waitingFx } from "./status.js";
 import { updateDraft } from "./draft.js";
 import { renderChips } from "./chips.js";
 import { renderCost } from "./cost.js";
+import { updateShareButton } from "../ui/share.js";
 
 async function pollOnce() {
   try {
@@ -21,6 +22,7 @@ async function pollOnce() {
     syncQuestions();
     renderChips();
     renderCost();
+    updateShareButton();
     liveBadge();
     updateDraft();
   } catch (e) {
