@@ -109,7 +109,18 @@
   <div class="sheet-body">
     <h2 id="trials-title">지난 재판</h2>
     <ol class="trial-list" id="trial-list"></ol>
-    <div class="sheet-actions"><button type="button" class="primary" id="trials-close">닫기</button></div>
+    <div class="sheet-actions">
+      <button type="button" id="trials-compare" disabled>두 개를 고르면 비교 (0/2)</button>
+      <button type="button" class="primary" id="trials-close">닫기</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="compare" class="sheet wide" aria-labelledby="compare-title">
+  <div class="sheet-body">
+    <h2 id="compare-title">재판 비교</h2>
+    <div id="compare-body"></div>
+    <div class="sheet-actions"><button type="button" class="primary" id="compare-close">닫기</button></div>
   </div>
 </dialog>
 

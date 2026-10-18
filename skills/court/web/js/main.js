@@ -24,6 +24,7 @@ import { setupSound } from "./ui/sound.js";
 import { setupSwipe } from "./ui/swipe.js";
 import { setupShare } from "./ui/share.js";
 import { setupTrials } from "./live/trials.js";
+import { setupCompare } from "./live/compare.js";
 
 function boot() {
   app.data = JSON.parse($("#court-data").textContent);
@@ -50,6 +51,7 @@ function boot() {
   setupSwipe();
   setupShare();
   setupTrials();
+  setupCompare();
   liveBadge();
   waitingFx();
   watchLayout();

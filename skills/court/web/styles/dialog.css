@@ -37,6 +37,21 @@ dialog.sheet::backdrop{background:rgba(20,14,8,.55)}
 .badge.g{background:var(--pros);color:#fff}
 .badge.n{background:var(--ng);color:#fff}
 
+/* Comparing two trials. */
+dialog.sheet.wide{width:min(720px,calc(100vw - 32px))}
+.cmp-head{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cmp-col{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2);min-width:0}
+.cmp-col .when{font-size:11px;color:var(--muted)}
+.cmp-col b{font-family:var(--serif);font-size:18px}
+.cmp-col .what{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cmp-sum{margin:0;font-size:13px}
+.cmp-scroll{max-height:min(50vh,420px);overflow:auto}
+.cmp-table{border-collapse:collapse;width:100%;font-size:13px}
+.cmp-table th,.cmp-table td{text-align:left;padding:5px 8px 5px 0;border-bottom:1px solid var(--line)}
+.cmp-table th{color:var(--muted);font-weight:500;font-size:12px}
+.cmp-table tr.flipped td{background:color-mix(in srgb,var(--gold) 14%,transparent);font-weight:600}
+.cmp-table .vote{margin-left:0}
+
 /* Shortcut sheet. */
 .keys{border-collapse:collapse;font-size:14px}
 .keys td{padding:6px 10px 6px 0;border-bottom:1px solid var(--line)}
