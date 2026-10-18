@@ -209,19 +209,22 @@ class CourtTest(unittest.TestCase):
 
     def test_parallel_caps_calls_at_once(self):
         import threading
-        import time
         for parallel, expected in ((1, 1), (12, 6)):
             state = self.open_trial("--jury", "6")
-            live, peak, lock = [0], [0], threading.Lock()
+            live, peak, cond = [0], [0], threading.Condition()
 
             def answer(prompt):
-                with lock:
+                juror = "You are JUROR" in prompt
+                with cond:
                     live[0] += 1
                     peak[0] = max(peak[0], live[0])
-                time.sleep(0.05)
-                with lock:
+                    cond.notify_all()
+                    # Jurors hold until as many as the cap allows are in, so the peak never depends on timing.
+                    if juror:
+                        cond.wait_for(lambda: live[0] >= expected, timeout=2)
+                with cond:
                     live[0] -= 1
-                return "VOTE: GUILTY" if "You are JUROR" in prompt else "1. point"
+                return "VOTE: GUILTY" if juror else "1. point"
 
             self.run_with(state, answer, parallel=parallel)
             self.assertEqual(peak[0], expected)
