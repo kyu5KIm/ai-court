@@ -32,6 +32,9 @@
 .pending{display:none}
 .shown{animation:fadein .45s ease-out both}
 .msg.flash,.verdict.flash{animation:flash 1.4s ease-out}
+.body .action{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
+.body .action button{flex:0 0 auto}
+.body .action .muted{font-size:12px}
 .msg.draft{border-style:dashed;opacity:.94}
 .msg.typing .body::after{content:"";display:block;width:30px;height:8px;margin-top:8px;opacity:.55;
   background:radial-gradient(circle,var(--muted) 2.5px,transparent 3px) 0 0/10px 8px repeat-x;animation:blink 1s infinite}

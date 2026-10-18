@@ -6,11 +6,27 @@ import { postJSON } from "./api.js";
 
 const LOGIN_NEEDED = "재판을 열려면 이 컴퓨터의 claude 명령이 로그인되어 있어야 해요. 터미널에서 claude auth login을 한 번 실행해 주세요.";
 
-export function openNewCase() {
+/**
+ * Open the new-case dialog, optionally filled in (a retrial passes the case, jury size and seed).
+ * @param {{case?: string, jury?: number, seed?: string}} [prefill]
+ */
+export function openNewCase(prefill) {
   const dlg = $("#newcase");
   $("#nc-err").textContent = app.data.login === false ? LOGIN_NEEDED : "";
+  if (prefill && prefill.case != null) {
+    $("#nc-case").value = prefill.case;
+    const jury = $("#nc-jury");
+    const size = String(prefill.jury || "");
+    if (size && !Array.from(jury.options).some((/** @type {HTMLOptionElement} */ o) => o.value === size)) {
+      jury.add(new Option(size + "명 · claude 호출 " + (Number(size) + 5) + "번", size));
+    }
+    if (size) jury.value = size;
+    $("#nc-seed").value = prefill.seed || "";
+  }
   if (dlg.showModal) { if (!dlg.open) dlg.showModal(); } else dlg.setAttribute("open", "");
-  $("#nc-case").focus();
+  const box = $("#nc-case");
+  box.focus();
+  if (prefill) { box.selectionStart = box.selectionEnd = box.value.length; box.scrollTop = box.scrollHeight; }
 }
 
 function closeNewCase() {
@@ -22,7 +38,7 @@ export function setupNewCase() {
   if (!app.data.live || !app.data.ask) return;
   const b = $("#b-new");
   b.hidden = false;
-  b.addEventListener("click", openNewCase);
+  b.addEventListener("click", () => openNewCase());
   $("#nc-cancel").addEventListener("click", closeNewCase);
   $("#nc-form").addEventListener("submit", async (/** @type {Event} */ e) => {
     e.preventDefault();

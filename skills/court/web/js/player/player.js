@@ -56,7 +56,7 @@ function tick() {
   it.classList.remove("pending");
   it.classList.add("shown");
   if (c.i >= c.items.length) c.el.classList.remove("typing");
-  if (!it.classList.contains("path")) say(cast[c.sc.actor], itemText(it), c.sc.tone);
+  if (!it.classList.contains("path") && !it.classList.contains("action")) say(cast[c.sc.actor], itemText(it), c.sc.tone);
   follow(it, stick);
   const len = (it.textContent || "").length;
   later(tick, Math.min(9000, 420 + len * 26) / clock.speed);

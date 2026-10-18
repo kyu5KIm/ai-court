@@ -25,6 +25,7 @@ import { setupSwipe } from "./ui/swipe.js";
 import { setupShare } from "./ui/share.js";
 import { setupTrials } from "./live/trials.js";
 import { setupCompare } from "./live/compare.js";
+import { setupRetrial } from "./live/retrial.js";
 
 function boot() {
   app.data = JSON.parse($("#court-data").textContent);
@@ -52,6 +53,7 @@ function boot() {
   setupShare();
   setupTrials();
   setupCompare();
+  setupRetrial();
   liveBadge();
   waitingFx();
   watchLayout();

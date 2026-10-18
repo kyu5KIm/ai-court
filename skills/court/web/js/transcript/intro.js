@@ -22,7 +22,7 @@ export function renderIntro() {
         : '<p class="meta">이 컴퓨터에서 claude 명령을 찾지 못해 여기서 재판을 열 수 없어요.</p>');
     logEl().appendChild(el);
     const b = el.querySelector("#b-intro-new");
-    if (b) b.addEventListener("click", openNewCase);
+    if (b) b.addEventListener("click", () => openNewCase());
     return;
   }
   el.innerHTML = CAST_ROW() + '<h2>사건</h2><p class="case">' + esc(caseTitle()) + "</p>" +

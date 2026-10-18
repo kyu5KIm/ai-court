@@ -11,6 +11,7 @@ import { updateDraft } from "./draft.js";
 import { renderChips } from "./chips.js";
 import { renderCost } from "./cost.js";
 import { updateShareButton } from "../ui/share.js";
+import { updateRetrialButton } from "./retrial.js";
 
 async function pollOnce() {
   try {
@@ -23,6 +24,7 @@ async function pollOnce() {
     renderChips();
     renderCost();
     updateShareButton();
+    updateRetrialButton();
     liveBadge();
     updateDraft();
   } catch (e) {

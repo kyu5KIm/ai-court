@@ -5,6 +5,7 @@ import { md, esc, inline } from "../core/markdown.js";
 import { VOTE_KO, VOTE_CLS, JUROR_KO, LENS_GROUPS } from "../core/constants.js";
 import { jurors } from "../stage/cast.js";
 import { raiseSign, setScore, verdictFx, parkStamp } from "../stage/effects.js";
+import { retrialOffered } from "../live/retrial.js";
 
 /** @returns {import("../types.js").VerdictParts} */
 export function verdictParts() {
@@ -109,6 +110,8 @@ export function buildScenes() {
   if (!d.judge && !complete) return S;
   judge(5, "선고", d.judge ? md(d.judge) : '<p class="muted">판사가 아직 판결문을 쓰지 않았어요.</p>');
   S.push({ phase: 5, actor: "clerk", side: "center", name: "서기", tag: "폐정",
-    html: '<p>이것으로 재판을 마칩니다. 전체 기록은 아래 폴더에 있어요.</p><p class="path"><code>' + esc(d.dir) + "</code></p>" });
+    html: '<p>이것으로 재판을 마칩니다. 전체 기록은 아래 폴더에 있어요.</p><p class="path"><code>' + esc(d.dir) + "</code></p>" +
+      (retrialOffered() ? '<p class="action"><button type="button" class="primary" data-action="retrial">재심 열기</button> ' +
+        '<span class="muted">무죄 조건을 붙여 같은 배심원 앞에서 다시 재판해요.</span></p>' : "") });
   return S;
 }
