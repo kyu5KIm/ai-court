@@ -23,21 +23,28 @@
 <body>
 <div class="wrap">
   <header class="top">
-    <div>
-      <div class="kicker"><span data-i18n="kicker">COURT</span><span class="live" id="live"></span><span class="viewing" id="viewing" hidden></span></div>
-      <h1 id="case-title" data-i18n="appName">AI 법정</h1>
+    <div class="brand">
+      <div class="kicker"><span data-i18n="kicker">COURT</span><span class="viewing" id="viewing" hidden></span></div>
+      <div class="title-row">
+        <h1 id="case-title" data-i18n="appName">AI 법정</h1>
+        <span class="live" id="live" aria-live="polite"></span>
+      </div>
     </div>
-    <ol class="phases" id="phases"></ol>
     <div class="tools" id="tools">
-      <button class="tool" id="b-trials" type="button" data-i18n="trialsBtn" hidden>지난 재판</button>
-      <button class="tool" id="b-retrial" type="button" data-i18n="retrialBtn" data-i18n-title="retrialTitle" hidden>재심</button>
-      <button class="tool" id="b-theme" type="button">◐</button>
-      <button class="tool" id="b-image" type="button" data-i18n="imageBtn" data-i18n-title="imageTitle" hidden>평결 이미지</button>
-      <button class="tool" id="b-print" type="button" data-i18n="printBtn" data-i18n-title="printTitle">인쇄</button>
-      <button class="tool" id="b-help" type="button" data-i18n-title="helpTitle" data-i18n-aria="helpLabel">?</button>
-      <button class="tool" id="b-lang" type="button" data-i18n="langSwitch" data-i18n-title="langTitle">EN</button>
+      <div class="tool-group trial" role="group" data-i18n-aria="trialTools" aria-label="재판">
+        <button class="tool" id="b-trials" type="button" data-i18n="trialsBtn" hidden>지난 재판</button>
+        <button class="tool" id="b-retrial" type="button" data-i18n="retrialBtn" data-i18n-title="retrialTitle" hidden>재심</button>
+        <button class="tool" id="b-image" type="button" data-i18n="imageBtn" data-i18n-title="imageTitle" hidden>평결 이미지</button>
+        <button class="tool" id="b-print" type="button" data-i18n="printBtn" data-i18n-title="printTitle">인쇄</button>
+      </div>
+      <div class="tool-group view" role="group" data-i18n-aria="viewTools" aria-label="화면">
+        <button class="tool" id="b-theme" type="button">◐</button>
+        <button class="tool" id="b-help" type="button" data-i18n-title="helpTitle" data-i18n-aria="helpLabel">?</button>
+        <button class="tool" id="b-lang" type="button" data-i18n="langSwitch" data-i18n-title="langTitle">EN</button>
+      </div>
       <button class="newcase" id="b-new" type="button" data-i18n="newCaseBtn" hidden>＋ 새 사건</button>
     </div>
+    <ol class="phases" id="phases"></ol>
   </header>
 
   <div class="layout">

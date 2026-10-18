@@ -1,6 +1,8 @@
 /* Phone layout: the stage pins to the top and shrinks. */
 @media (max-width:860px){
   .layout{grid-template-columns:1fr;gap:16px}
+  .top{grid-template-columns:1fr;gap:12px}
+  .tools{justify-content:flex-start}
   .stage{top:0;margin:0 -16px;border-radius:0 0 14px 14px;border-top:0;z-index:5}
   .scene{--h:250px;--s:31px}
   .plate{font-size:9px;margin-top:2px;padding:0 4px}

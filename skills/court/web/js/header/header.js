@@ -32,7 +32,7 @@ export function setPhase(p) {
   });
 }
 
-/** "● LIVE" while a served trial runs, then "재판 종료". */
+/** "LIVE" while a served trial runs, then "재판 종료" (the dot is drawn by CSS). */
 export function liveBadge() {
   const el = $("#live"), d = app.data;
   if (d.empty || !d.live) { el.textContent = ""; return; }
