@@ -24,11 +24,12 @@
 <div class="wrap">
   <header class="top">
     <div>
-      <div class="kicker">COURT · AI 법정<span class="live" id="live"></span></div>
+      <div class="kicker">COURT · AI 법정<span class="live" id="live"></span><span class="viewing" id="viewing" hidden></span></div>
       <h1 id="case-title"></h1>
     </div>
     <ol class="phases" id="phases"></ol>
     <div class="tools" id="tools">
+      <button class="tool" id="b-trials" type="button" hidden>지난 재판</button>
       <button class="tool" id="b-theme" type="button">◐</button>
       <button class="tool" id="b-image" type="button" title="평결을 그림 파일로 저장" hidden>평결 이미지</button>
       <button class="tool" id="b-print" type="button" title="판결문 인쇄">인쇄</button>
@@ -101,6 +102,14 @@
       <tr><td>휴대폰</td><td>화면을 왼쪽으로 밀면 다음 장면</td></tr>
     </table>
     <div class="sheet-actions"><button type="button" class="primary" id="help-close">닫기</button></div>
+  </div>
+</dialog>
+
+<dialog id="trials" class="sheet" aria-labelledby="trials-title">
+  <div class="sheet-body">
+    <h2 id="trials-title">지난 재판</h2>
+    <ol class="trial-list" id="trial-list"></ol>
+    <div class="sheet-actions"><button type="button" class="primary" id="trials-close">닫기</button></div>
   </div>
 </dialog>
 

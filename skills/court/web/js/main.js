@@ -23,10 +23,12 @@ import { setupPrint } from "./ui/print.js";
 import { setupSound } from "./ui/sound.js";
 import { setupSwipe } from "./ui/swipe.js";
 import { setupShare } from "./ui/share.js";
+import { setupTrials } from "./live/trials.js";
 
 function boot() {
   app.data = JSON.parse($("#court-data").textContent);
   app.token = app.data.token || "";
+  app.run = new URLSearchParams(location.search).get("run") || "";
 
   setupTheme();
   renderHeader();
@@ -47,6 +49,7 @@ function boot() {
   setupSound();
   setupSwipe();
   setupShare();
+  setupTrials();
   liveBadge();
   waitingFx();
   watchLayout();

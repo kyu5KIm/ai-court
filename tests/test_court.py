@@ -245,6 +245,27 @@ class CourtTest(unittest.TestCase):
         left = [f for d, _, fs in os.walk(state["dir"]) for f in fs if f.endswith((".draft", ".tmp"))]
         self.assertEqual(left, [])
 
+    def test_past_trials_are_listed_newest_first(self):
+        first = self.open_trial("--jury", "3")
+        for j in court.jobs(first, "jury"):
+            court.write_text(j["output"], "VOTE: NOT GUILTY\n")
+        os.rename(first["dir"], os.path.join(".court", "20200101-000000"))
+        self.open_trial("--jury", "3")
+        trials = court.list_trials(".")
+        self.assertEqual(len(trials), 2)
+        self.assertTrue(trials[0]["latest"] and not trials[1]["latest"])
+        self.assertEqual(trials[1]["run"], "20200101-000000")
+        self.assertEqual((trials[1]["verdict"], trials[1]["not_guilty"]), ("NOT GUILTY", 3))
+        self.assertIsNone(trials[0]["verdict"])  # nobody has voted yet
+        self.assertIn("Quit my job", trials[0]["case"])
+
+    def test_run_names_from_the_page_cannot_leave_the_court_folder(self):
+        state = self.open_trial("--jury", "3")
+        name = os.path.basename(state["dir"])
+        self.assertEqual(court.run_path(".", name), os.path.join(".", ".court", name))
+        for bad in ("", "..", "../x", "a/b", "a\\b", "LATEST", "nope"):
+            self.assertIsNone(court.run_path(".", bad), bad)
+
     def fake_cli(self, lines):
         """An executable that prints `lines` (stream-json events) the way `claude -p` does."""
         script = os.path.join(self.tmp, "fake_claude.py")

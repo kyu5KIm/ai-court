@@ -762,10 +762,57 @@ def cmd_run(args):
               parallel=args.parallel)
 
 
+RUN_NAME_RE = re.compile(r"^[\w-]{1,64}$")
+
+
+def run_path(root, name):
+    """The folder of trial `name` under root/.court, or None if that is not a trial there.
+
+    Names come from the page, so only plain folder names are accepted (no separators, no "..").
+    """
+    if not name or not RUN_NAME_RE.match(name):
+        return None
+    rd = os.path.join(root, ROOT, name)
+    return rd if os.path.isfile(os.path.join(rd, "state.json")) else None
+
+
+def latest_run(root):
+    """The folder name .court/LATEST points at, or an empty string."""
+    try:
+        return re.split(r"[\\/]", read_text(os.path.join(root, LATEST)).strip())[-1]
+    except OSError:
+        return ""
+
+
+def list_trials(root):
+    """Every trial under root/.court, newest first, with what the past-trials list shows."""
+    base = os.path.join(root, ROOT)
+    latest = latest_run(root)
+    out = []
+    for name in sorted(os.listdir(base), reverse=True) if os.path.isdir(base) else []:
+        rd = run_path(root, name)
+        if not rd:
+            continue
+        try:
+            state = load_state(rd)
+            state["dir"] = rd
+            lines = [l.strip().lstrip("#").strip() for l in read_text(os.path.join(rd, "case.md")).splitlines()]
+            t = count_votes(state)
+            voted = all(done(j) for j in jobs(state, "jury"))
+            out.append({"run": name, "case": next((l for l in lines if l), "")[:140],
+                        "created": state.get("created"), "jury": len(state["jury"]), "seed": state.get("seed"),
+                        "finished": next_phase(state) == "done", "verdict": t["verdict"] if voted else None,
+                        "guilty": t["guilty"], "not_guilty": t["not_guilty"], "latest": name == latest})
+        except (OSError, ValueError, KeyError):
+            continue
+    return out
+
+
 def cmd_serve(args):
     import http.server
     import secrets
     import shutil
+    from urllib.parse import urlsplit, parse_qs
 
     claude = os.environ.get("COURT_CLAUDE") or shutil.which("claude")
     token = secrets.token_urlsafe(18)
@@ -773,7 +820,15 @@ def cmd_serve(args):
     slots = threading.Semaphore(2)
     cfg = {"port": None, "login": False, "fixed": os.path.abspath(args.run) if args.run else None, "runner": None}
 
-    def current():
+    def current(run=None):
+        """The trial to show: `run` if the page asked for one, else the --run folder, else the latest."""
+        if run:
+            rd = run_path(root, run)
+            if not rd:
+                raise ValueError("no trial named %r" % run)
+            state = load_state(rd)
+            state["dir"] = rd
+            return state
         rd = cfg["fixed"]
         if not rd:
             with open(os.path.join(root, LATEST), encoding="utf-8") as f:
@@ -806,11 +861,17 @@ def cmd_serve(args):
         def do_GET(self):
             if not self.host_ok():
                 return self.send(403, "forbidden", "text/plain")
-            path = self.path.split("?")[0]
-            if path not in ("/", "/trial.html", "/api/state"):
+            url = urlsplit(self.path)
+            path, run = url.path, (parse_qs(url.query).get("run") or [""])[0]
+            if path not in ("/", "/trial.html", "/api/state", "/api/trials"):
                 return self.send(404, "not found", "text/plain")
+            if path == "/api/trials":
+                return self.send_json(200, list_trials(root))
+            if run and not run_path(root, run):
+                return self.send(404, "court: no trial named %s" % run, "text/plain; charset=utf-8")
             try:
-                data = trial_data(current())
+                data = trial_data(current(run))
+                data["run"] = os.path.basename(os.path.normpath(data["dir"]))
             except (OSError, ValueError):
                 data = {"empty": True, "case": "", "judge": "", "statements": [], "jurors": [], "questions": [],
                         "verdict": "", "guilty": 0, "not_guilty": 0, "no_vote": 0, "phase": "none",
@@ -840,9 +901,9 @@ def cmd_serve(args):
             if self.path == "/api/trial":
                 return self.new_trial(body)
             try:
-                state = current()
+                state = current(str(body.get("run") or "") or None)
             except (OSError, ValueError):
-                return self.send_json(400, {"error": "아직 열린 재판이 없어요"})
+                return self.send_json(400, {"error": "그 재판을 찾을 수 없어요"})
             who, text = str(body.get("who", "")), str(body.get("q", "")).strip()
             if who not in roles(state) or not text or len(text) > 600:
                 return self.send_json(400, {"error": "누구에게 무엇을 물을지 확인해 주세요 (600자 이내)"})
