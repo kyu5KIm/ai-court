@@ -139,6 +139,21 @@ class CourtTest(unittest.TestCase):
         names = re.findall(r"(?m)^(?:async )?(?:function|const|let|class) ([\w$]+)", js)
         self.assertEqual(sorted(n for n in set(names) if names.count(n) > 1), [])
 
+    def test_every_page_text_key_has_both_languages(self):
+        """A key missing from i18n.js would show up on the page as the raw key, so catch typos here."""
+        web = court.WEB
+        i18n = court.read_text(os.path.join(web, "js", "core", "i18n.js"))
+        block = i18n.split("const STR = {", 1)[1].split("\n};", 1)[0]
+        defined = set(re.findall(r"(?m)^  (\w+): \[", block))
+        used = set()
+        for folder, _, files in os.walk(os.path.join(web, "js")):
+            for name in files:
+                used |= set(re.findall(r'\bt\("(\w+)"', court.read_text(os.path.join(folder, name))))
+        html = court.read_text(os.path.join(web, "index.html"))
+        used |= set(re.findall(r'data-i18n(?:-title|-placeholder|-aria)?="(\w+)"', html))
+        self.assertEqual(sorted(used - set(defined)), [])
+        self.assertGreater(len(used), 100)
+
     def test_bundler_refuses_imports_it_cannot_join(self):
         entry = os.path.join(self.tmp, "entry.js")
         with open(entry, "w", encoding="utf-8") as f:
