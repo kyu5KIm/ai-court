@@ -8,6 +8,7 @@ import { fetchState } from "./api.js";
 import { syncQuestions } from "./questions.js";
 import { waitingFx } from "./status.js";
 import { updateDraft } from "./draft.js";
+import { renderChips } from "./chips.js";
 
 async function pollOnce() {
   try {
@@ -17,6 +18,7 @@ async function pollOnce() {
     app.data = next;
     mergeScenes();
     syncQuestions();
+    renderChips();
     liveBadge();
     updateDraft();
   } catch (e) {
