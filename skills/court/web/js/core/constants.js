@@ -17,6 +17,14 @@ export const JUROR_KO = {
   "The Lawyer": ["변호사", "기록에 없는 법적·규제상의 함정이 있는지 봐요."],
 };
 
+/** Jurors grouped by what they look at, for the vote map under the verdict. @type {[string, string[]][]} */
+export const LENS_GROUPS = [
+  ["돈", ["The Accountant", "The Investor", "The Statistician"]],
+  ["손님과 시장", ["The First-Time Customer", "The Competitor", "The Teenager", "The Designer"]],
+  ["실행", ["The Engineer", "The Small-Business Owner"]],
+  ["위험과 규칙", ["The Retired Judge", "The Parent", "The Lawyer"]],
+];
+
 /** Hat colours, one per juror seat. */
 export const HATS = ["#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#14b8a6",
   "#64748b", "#6366f1", "#84cc16", "#0ea5e9", "#a855f7", "#e11d48"];

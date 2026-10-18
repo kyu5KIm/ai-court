@@ -46,6 +46,15 @@
 .verdict.g{background:#9c2a22} .verdict.n{background:#2e6e48}
 .verdict .lead{font-size:13px;opacity:.85;letter-spacing:.1em}
 .verdict .v{font-family:var(--serif);font-size:clamp(42px,7vw,66px);font-weight:800;letter-spacing:.1em;line-height:1.15;margin:4px 0}
+.votemap{display:inline-flex;flex-direction:column;gap:5px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.3);text-align:left}
+.vm-row{display:flex;align-items:center;gap:5px}
+.vm-k{width:84px;font-size:12px;opacity:.85}
+.vm{width:16px;height:16px;border-radius:4px;border:2px solid #fff;display:inline-block}
+.vm.g{background:#fff}
+.vm.n{background:transparent}
+.vm.x{border-style:dotted;opacity:.6}
+.vm-legend{display:flex;align-items:center;gap:5px;font-size:11px;opacity:.8;margin-top:2px}
+.vm-legend .vm{width:11px;height:11px;border-width:1.5px;margin-left:6px}
 .verdict .count{font-size:15px;opacity:.92}
 .msg.user{align-self:flex-end;max-width:min(520px,84%);background:var(--def-bg);border-color:transparent;border-top-right-radius:4px}
 .msg.user header{flex-direction:row-reverse}

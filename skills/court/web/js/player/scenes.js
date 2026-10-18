@@ -2,7 +2,7 @@
 // Turns the trial record into the list of scenes the player steps through.
 import { app } from "../core/state.js";
 import { md, esc, inline } from "../core/markdown.js";
-import { VOTE_KO, VOTE_CLS } from "../core/constants.js";
+import { VOTE_KO, VOTE_CLS, JUROR_KO, LENS_GROUPS } from "../core/constants.js";
 import { jurors } from "../stage/cast.js";
 import { raiseSign, setScore, verdictFx, parkStamp } from "../stage/effects.js";
 
@@ -12,6 +12,22 @@ export function verdictParts() {
   if (verdict === "GUILTY") return ["유죄", g + " 대 " + n, "g"];
   if (verdict === "NOT GUILTY") return ["무죄", n + " 대 " + g, "n"];
   return ["평결 불성립", "유죄 " + g + " · 무죄 " + n, "h"];
+}
+
+/** The verdict card's vote map: one square per juror, grouped by the kind of thing they look at. */
+function voteMap() {
+  const byName = new Map(app.data.jurors.map((j) => [j.juror, j]));
+  const rows = LENS_GROUPS.map(([group, names]) => {
+    const here = names.filter((n) => byName.has(n));
+    if (!here.length) return "";
+    return '<div class="vm-row"><span class="vm-k">' + esc(group) + "</span>" + here.map((n) => {
+      const j = /** @type {import("../types.js").JurorRecord} */ (byName.get(n));
+      const label = (JUROR_KO[n] ? JUROR_KO[n][0] : n) + " · " + (VOTE_KO[j.vote] || j.vote);
+      return '<span class="vm ' + (VOTE_CLS[j.vote] || "x") + '" title="' + esc(label) + '" aria-label="' + esc(label) + '"></span>';
+    }).join("") + "</div>";
+  }).join("");
+  return rows ? '<div class="votemap">' + rows +
+    '<div class="vm-legend"><span class="vm g"></span>유죄 <span class="vm n"></span>무죄</div></div>' : "";
 }
 
 /**
@@ -86,7 +102,7 @@ export function buildScenes() {
   const v = verdictParts();
   S.push({
     phase: 4, actor: "judge", kind: "verdict", hold: 2800, verdict: v,
-    html: '<div class="lead">배심원 평결</div><div class="v">' + v[0] + '</div><div class="count">' + v[1] + "</div>",
+    html: '<div class="lead">배심원 평결</div><div class="v">' + v[0] + '</div><div class="count">' + v[1] + "</div>" + voteMap(),
     enter: (instant) => verdictFx(v, instant),
     after: parkStamp,
   });
