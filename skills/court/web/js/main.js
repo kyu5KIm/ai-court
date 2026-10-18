@@ -16,6 +16,7 @@ import { startPolling } from "./live/poll.js";
 import { setupTheme } from "./ui/theme.js";
 import { setupHelp } from "./ui/help.js";
 import { setupPrint } from "./ui/print.js";
+import { setupSound } from "./ui/sound.js";
 
 function boot() {
   app.data = JSON.parse($("#court-data").textContent);
@@ -33,6 +34,7 @@ function boot() {
   setupNewCase();
   setupHelp();
   setupPrint();
+  setupSound();
   liveBadge();
   waitingFx();
   watchLayout();

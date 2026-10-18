@@ -3,6 +3,7 @@
 import { $, replayAnimation } from "../core/dom.js";
 import { later } from "../core/clock.js";
 import { cast } from "./cast.js";
+import { playSound } from "../ui/sound.js";
 
 /**
  * A juror stops thinking and raises a vote sign.
@@ -16,7 +17,7 @@ export function raiseSign(c, cls, label, instant) {
   /** @type {HTMLElement} */ (sign.querySelector("b")).textContent = label;
   void sign.offsetWidth;
   sign.classList.add("on");
-  if (!instant) replayAnimation(c.el, "hop");
+  if (!instant) { replayAnimation(c.el, "hop"); playSound("sign"); }
 }
 
 /** @param {number} guilty @param {number} notGuilty @param {boolean} animate */
@@ -48,8 +49,12 @@ export function verdictFx(v, instant) {
   gavel.classList.remove("strike");
   scene.classList.remove("shake");
   replayAnimation(gavel, "strike");
+  // The gavel animation lands at 40% and 75% of its 1.1s; the stamp settles about 450ms after it appears.
+  later(() => playSound("gavel"), 440);
   later(() => scene.classList.add("shake"), 430);
   later(() => stamp.classList.add("on"), 500);
+  later(() => playSound("gavel"), 825);
+  later(() => playSound("stamp"), 950);
   later(() => {
     if (win) replayAnimation(win.el, "cheer");
     if (lose) lose.el.classList.add("slump");
