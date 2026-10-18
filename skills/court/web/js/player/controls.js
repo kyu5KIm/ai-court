@@ -6,6 +6,7 @@ import { esc } from "../core/markdown.js";
 import { clock, walkMs, nextSpeed } from "../core/clock.js";
 import { step, setPlaying, restart, showAll } from "./player.js";
 import { openHelp } from "../ui/help.js";
+import { renderTimeline } from "./timeline.js";
 
 /** Bring the button labels in line with the player. */
 export function sync() {
@@ -16,6 +17,7 @@ export function sync() {
   $("#b-next").disabled = none;
   $("#b-all").disabled = none;
   $("#b-speed").textContent = clock.speed + "×";
+  renderTimeline();
 }
 
 /** @param {number} s */

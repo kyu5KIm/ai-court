@@ -100,12 +100,16 @@ export function resetCast() {
   }
 }
 
-/** Everyone back in their seat, keeping signs and the verdict mood. */
-export function settleCast() {
+/**
+ * Everyone back in their seat, keeping signs and the verdict mood.
+ * @param {boolean} [keepThinking]  leave "…" on jurors still deliberating (jumping into the jury phase)
+ */
+export function settleCast(keepThinking) {
   for (const k in cast) {
     const c = cast[k];
     clearTimeout(c.walkTimer);
-    c.el.classList.remove("walking", "thinking", "talking", "active", "hop", "cheer");
+    c.el.classList.remove("walking", "talking", "active", "hop", "cheer");
+    if (!keepThinking) c.el.classList.remove("thinking");
     place(c, c.home, true);
   }
 }

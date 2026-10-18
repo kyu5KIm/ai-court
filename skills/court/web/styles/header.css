@@ -6,6 +6,8 @@
 .phases{display:flex;gap:6px;flex-wrap:wrap;padding:0;margin:0;list-style:none}
 .phases li{font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:var(--panel);transition:background .3s,color .3s}
 .phases li.done{color:var(--ink)}
+.phases li{cursor:pointer}
+.phases li.na{opacity:.45;cursor:default}
 .phases li.on{background:var(--wood);border-color:var(--wood);color:#fff}
 .kicker .live{margin-left:8px;color:#d33;font-weight:700;letter-spacing:.08em}
 .kicker .live.done{color:var(--muted)}

@@ -1,4 +1,12 @@
 /* Now-playing line and the player controls under the stage. */
 .now{display:flex;align-items:center;gap:8px;min-height:40px;padding:9px 16px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
 .now b{color:var(--ink);font-weight:600}
+.timeline{display:flex;gap:2px;padding:7px 12px 6px;border-top:1px solid var(--line);align-items:center}
+.timeline[hidden]{display:none}
+.tl{flex:1 1 0;min-width:3px;height:9px;padding:0;border:0;border-radius:3px;background:var(--line);cursor:pointer;transition:background .2s,transform .2s}
+.tl:hover{transform:scaleY(1.6)}
+.tl.done{background:var(--wood-hi)}
+.tl.on{background:var(--gold);transform:scaleY(1.6)}
+.tl.verdict{flex-grow:2}
+.tl.more{cursor:default;background:repeating-linear-gradient(90deg,var(--line) 0 3px,transparent 3px 6px)}
 .controls{display:flex;gap:6px;padding:10px 12px 12px;border-top:1px solid var(--line)}

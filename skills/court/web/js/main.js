@@ -9,6 +9,7 @@ import { watchLayout } from "./stage/layout.js";
 import { buildScenes } from "./player/scenes.js";
 import { setPlaying } from "./player/player.js";
 import { bindControls, setSpeed } from "./player/controls.js";
+import { setupTimeline } from "./player/timeline.js";
 import { renderIntro } from "./transcript/intro.js";
 import { waitingFx } from "./live/status.js";
 import { setupAsk } from "./live/questions.js";
@@ -32,6 +33,7 @@ function boot() {
   renderIntro();
   setPhase(-1);
   bindControls();
+  setupTimeline();
   setSpeed(1);
   setupAsk();
   setupNewCase();
