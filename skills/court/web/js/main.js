@@ -18,6 +18,7 @@ import { setupTheme } from "./ui/theme.js";
 import { setupHelp } from "./ui/help.js";
 import { setupPrint } from "./ui/print.js";
 import { setupSound } from "./ui/sound.js";
+import { setupSwipe } from "./ui/swipe.js";
 
 function boot() {
   app.data = JSON.parse($("#court-data").textContent);
@@ -37,6 +38,7 @@ function boot() {
   setupHelp();
   setupPrint();
   setupSound();
+  setupSwipe();
   liveBadge();
   waitingFx();
   watchLayout();
