@@ -3,14 +3,15 @@
 import { app } from "../core/state.js";
 import { $ } from "../core/dom.js";
 import { esc } from "../core/markdown.js";
+import { t } from "../core/i18n.js";
 
 /** `after`: only once the judgment is in. @type {{who: string, q: string, after?: boolean}[]} */
 const CHIPS = [
-  { who: "judge", q: "왜 이런 평결이 나왔나요?", after: true },
-  { who: "judge", q: "가장 쉽게 해낼 수 있는 무죄 조건은 뭐예요?", after: true },
-  { who: "prosecution", q: "가장 치명적인 약점 하나만 꼽는다면요?" },
-  { who: "defense", q: "어떻게 하면 이길 수 있었을까요?" },
-  { who: "clerk", q: "지금까지 재판을 세 줄로 요약해 주세요." },
+  { who: "judge", q: t("chipWhy"), after: true },
+  { who: "judge", q: t("chipEasiest"), after: true },
+  { who: "prosecution", q: t("chipWorst") },
+  { who: "defense", q: t("chipWin") },
+  { who: "clerk", q: t("chipSummary") },
 ];
 
 const chipView = { finished: /** @type {boolean | null} */ (null) };

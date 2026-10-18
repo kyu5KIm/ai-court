@@ -2,7 +2,8 @@
 // Save the verdict as a picture (PNG), drawn on a canvas: no library, nothing leaves the computer.
 import { app } from "../core/state.js";
 import { $ } from "../core/dom.js";
-import { LENS_GROUPS, JUROR_KO } from "../core/constants.js";
+import { LENS_GROUPS } from "../core/constants.js";
+import { t, GROUP_NAMES } from "../core/i18n.js";
 import { caseTitle } from "../header/header.js";
 import { verdictParts } from "../player/scenes.js";
 
@@ -67,7 +68,7 @@ export function drawVerdict() {
 
   g.fillStyle = "#74685a";
   g.font = "600 30px " + SANS;
-  g.fillText("COURT · AI 법정", P, 100);
+  g.fillText(t("brand"), P, 100);
 
   g.fillStyle = "#2a2118";
   g.font = "700 50px " + SERIF;
@@ -94,7 +95,8 @@ export function drawVerdict() {
   // The vote map.
   const byName = new Map(app.data.jurors.map((j) => [j.juror, j]));
   g.font = "600 30px " + SANS;
-  for (const [group, names] of LENS_GROUPS) {
+  for (const [gi, [, names]] of LENS_GROUPS.entries()) {
+    const group = GROUP_NAMES[gi];
     const here = names.filter((n) => byName.has(n));
     if (!here.length) continue;
     g.fillStyle = "#74685a";
@@ -112,7 +114,7 @@ export function drawVerdict() {
   }
   g.fillStyle = "#74685a";
   g.font = "26px " + SANS;
-  g.fillText("■ 유죄   □ 무죄   (배심원 " + app.data.jurors.length + "명)", P, y + 24);
+  g.fillText(t("imgLegend", app.data.jurors.length), P, y + 24);
   y += 80;
 
   // Conditions for acquittal.
@@ -120,7 +122,7 @@ export function drawVerdict() {
   if (conditions.length) {
     g.fillStyle = "#2a2118";
     g.font = "700 36px " + SERIF;
-    g.fillText("무죄 조건", P, y);
+    g.fillText(t("conditionsHead"), P, y);
     y += 52;
     g.font = "30px " + SANS;
     conditions.forEach((c, i) => {

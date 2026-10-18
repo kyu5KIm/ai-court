@@ -4,19 +4,14 @@ import { app } from "../core/state.js";
 import { $ } from "../core/dom.js";
 import { esc } from "../core/markdown.js";
 import { fetchTrials } from "./api.js";
+import { t, runDate } from "../core/i18n.js";
 
-/** "20261012-204438" → "10월 12일 20:44". @param {string} run */
-export function runDate(run) {
-  const m = run.match(/^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})/);
-  return m ? Number(m[2]) + "월 " + Number(m[3]) + "일 " + m[4] + ":" + m[5] : run;
-}
-
-/** @param {any} t  one entry from /api/trials */
-export function verdictBadge(t) {
-  if (!t.verdict) return '<span class="badge">' + (t.finished ? "판결 없음" : "진행 중") + "</span>";
-  const cls = t.verdict === "GUILTY" ? "g" : t.verdict === "NOT GUILTY" ? "n" : "";
-  const word = t.verdict === "GUILTY" ? "유죄" : t.verdict === "NOT GUILTY" ? "무죄" : "불성립";
-  return '<span class="badge ' + cls + '">' + word + " " + t.guilty + ":" + t.not_guilty + "</span>";
+/** @param {any} tr  one entry from /api/trials */
+export function verdictBadge(tr) {
+  if (!tr.verdict) return '<span class="badge">' + (tr.finished ? t("noVerdict") : t("running")) + "</span>";
+  const cls = tr.verdict === "GUILTY" ? "g" : tr.verdict === "NOT GUILTY" ? "n" : "";
+  const word = tr.verdict === "GUILTY" ? t("guilty") : tr.verdict === "NOT GUILTY" ? t("notGuilty") : t("hungShort");
+  return '<span class="badge ' + cls + '">' + word + " " + tr.guilty + ":" + tr.not_guilty + "</span>";
 }
 
 /** The trial this page shows, as a /api/trials name. */
@@ -26,20 +21,20 @@ export function viewedRun() {
 
 async function openTrials() {
   const dlg = $("#trials"), list = $("#trial-list");
-  list.innerHTML = '<li class="muted">불러오는 중…</li>';
+  list.innerHTML = '<li class="muted">' + t("loading") + "</li>";
   if (dlg.showModal) { if (!dlg.open) dlg.showModal(); } else dlg.setAttribute("open", "");
   try {
     const trials = await fetchTrials();
     const here = viewedRun();
-    list.innerHTML = trials.length ? trials.map((t) =>
-      '<li class="trial' + (t.run === here ? " here" : "") + '">' +
-      '<label class="pick"><input type="checkbox" value="' + esc(t.run) + '" aria-label="비교할 재판으로 고르기"></label>' +
-      '<a href="./?run=' + encodeURIComponent(t.run) + '">' +
-      '<span class="when">' + esc(runDate(t.run)) + (t.latest ? " · 최신" : "") + (t.run === here ? " · 보는 중" : "") + "</span>" +
-      '<span class="what">' + esc(t.case || "(사건 없음)") + "</span></a>" + verdictBadge(t) + "</li>").join("")
-      : '<li class="muted">아직 재판이 없어요.</li>';
+    list.innerHTML = trials.length ? trials.map((tr) =>
+      '<li class="trial' + (tr.run === here ? " here" : "") + '">' +
+      '<label class="pick"><input type="checkbox" value="' + esc(tr.run) + '" aria-label="' + t("pickCompare") + '"></label>' +
+      '<a href="./?run=' + encodeURIComponent(tr.run) + '">' +
+      '<span class="when">' + esc(runDate(tr.run)) + (tr.latest ? t("latest") : "") + (tr.run === here ? t("viewing") : "") + "</span>" +
+      '<span class="what">' + esc(tr.case || t("noCase")) + "</span></a>" + verdictBadge(tr) + "</li>").join("")
+      : '<li class="muted">' + t("noTrials") + "</li>";
   } catch (e) {
-    list.innerHTML = '<li class="muted">목록을 불러오지 못했어요.</li>';
+    list.innerHTML = '<li class="muted">' + t("listFail") + "</li>";
   }
   list.dispatchEvent(new Event("change"));
 }
@@ -58,7 +53,7 @@ export function setupTrials() {
   // Looking at an older trial: say so, with the way back to the newest one.
   if (app.run) {
     const v = $("#viewing");
-    v.innerHTML = '지난 재판 · <a href="./">최신 재판 보기</a>';
+    v.innerHTML = t("viewingOld");
     v.hidden = false;
   }
 }

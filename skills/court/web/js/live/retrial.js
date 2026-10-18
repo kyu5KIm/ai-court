@@ -4,7 +4,8 @@ import { app } from "../core/state.js";
 import { $ } from "../core/dom.js";
 import { acquittalConditions } from "../ui/share.js";
 import { openNewCase } from "./newCase.js";
-import { runDate, viewedRun } from "./trials.js";
+import { viewedRun } from "./trials.js";
+import { t, runDate } from "../core/i18n.js";
 
 /** A retrial needs a judgment to answer, and a server that can open trials. */
 function canRetry() {
@@ -16,10 +17,10 @@ function canRetry() {
 export function retrialCase() {
   const d = app.data;
   const conditions = acquittalConditions();
-  const lines = [String(d.case || "").trim(), "", "[재심] 지난 재판(" + runDate(viewedRun()) + ")에서 판사가 낸 무죄 조건:"];
+  const lines = [String(d.case || "").trim(), "", t("retrialHead", runDate(viewedRun()))];
   conditions.forEach((c, i) => lines.push((i + 1) + ". " + c));
-  if (!conditions.length) lines.push("(판결문에서 무죄 조건을 찾지 못했어요. 직접 적어 주세요.)");
-  lines.push("", "위 조건 중 해낸 것과 그 결과:", "- ");
+  if (!conditions.length) lines.push(t("retrialNone"));
+  lines.push("", t("retrialDone"), "- ");
   return lines.join("\n");
 }
 

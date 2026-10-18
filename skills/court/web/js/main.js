@@ -26,12 +26,16 @@ import { setupShare } from "./ui/share.js";
 import { setupTrials } from "./live/trials.js";
 import { setupCompare } from "./live/compare.js";
 import { setupRetrial } from "./live/retrial.js";
+import { applyI18n } from "./core/i18n.js";
+import { setupLang } from "./ui/lang.js";
 
 function boot() {
   app.data = JSON.parse($("#court-data").textContent);
   app.token = app.data.token || "";
   app.run = new URLSearchParams(location.search).get("run") || "";
 
+  applyI18n();
+  setupLang();
   setupTheme();
   renderHeader();
   buildCast();

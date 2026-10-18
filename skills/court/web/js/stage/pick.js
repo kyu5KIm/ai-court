@@ -4,6 +4,7 @@ import { player } from "../core/state.js";
 import { $, replayAnimation } from "../core/dom.js";
 import { cast } from "./cast.js";
 import { say } from "./bubble.js";
+import { t } from "../core/i18n.js";
 
 const pickState = { timer: 0 };
 
@@ -18,7 +19,7 @@ function pickCharacter(id) {
     replayAnimation(last, "flash");
   } else if (!player.cur) {
     clearTimeout(pickState.timer);
-    say(c, "아직 발언 전이에요");
+    say(c, t("notYet"));
     pickState.timer = window.setTimeout(() => { if (!player.cur) say(null); }, 1600);
   }
   const who = /** @type {HTMLSelectElement} */ ($("#ask-who"));
@@ -31,7 +32,7 @@ export function setupCharacterPick() {
     el.dataset.id = id;
     el.tabIndex = 0;
     el.setAttribute("role", "button");
-    el.setAttribute("aria-label", el.title + " 발언 보기");
+    el.setAttribute("aria-label", t("seeWords", el.title));
   }
   $("#scene").addEventListener("click", (e) => {
     const el = e.target instanceof Element ? e.target.closest(".chr") : null;

@@ -3,15 +3,15 @@
 import { app } from "../core/state.js";
 import { $ } from "../core/dom.js";
 import { esc } from "../core/markdown.js";
+import { t, roleName } from "../core/i18n.js";
 
-const STAGE_KO = /** @type {Record<string, string>} */ ({ opening: "모두진술", rebuttal: "반박", jury: "평의", judge: "판결" });
-const ROLE_KO_PAGE = /** @type {Record<string, string>} */ ({ prosecution: "검사", defense: "변호인", judge: "판사" });
+const STAGE_KEY = /** @type {Record<string, string>} */ ({ opening: "tagOpening", rebuttal: "tagRebuttal", jury: "tagDeliberate", judge: "tagSentence" });
 
 /** "jury/juror-03" → "평의 · 배심원 3". @param {string} key */
 function callLabel(key) {
   const [phase, id] = key.split("/");
-  const who = id.startsWith("juror-") ? "배심원 " + Number(id.split("-")[1]) : ROLE_KO_PAGE[id] || id;
-  return (STAGE_KO[phase] || phase) + " · " + who;
+  const who = id.startsWith("juror-") ? t("jurorN", Number(id.split("-")[1])) : roleName(id);
+  return (STAGE_KEY[phase] ? t(STAGE_KEY[phase]) : phase) + " · " + who;
 }
 
 /** @param {number} n */
@@ -21,7 +21,7 @@ function tokens(n) {
 
 /** @param {number} s */
 function duration(s) {
-  return s >= 90 ? Math.round(s / 60) + "분" : Math.round(s) + "초";
+  return s >= 90 ? t("minutes", Math.round(s / 60)) : t("seconds", Math.round(s));
 }
 
 /** @param {any} c  one call's cost */
@@ -48,16 +48,16 @@ export function renderCost() {
   const totalIn = all.reduce((s, c) => s + inputOf(c), 0);
   const totalOut = all.reduce((s, c) => s + (c.output || 0), 0);
   const seconds = d.runner && d.runner.seconds;
-  $("#cost-summary").textContent = "비용과 시간 · " + [
-    seconds ? "재판 " + duration(seconds) : "",
-    "호출 " + all.length + "번",
-    "입력 " + tokens(totalIn) + " · 출력 " + tokens(totalOut) + " 토큰",
+  $("#cost-summary").textContent = t("costTitle") + " · " + [
+    seconds ? t("costTrial", duration(seconds)) : "",
+    t("costCalls", all.length),
+    t("costTokens", tokens(totalIn), tokens(totalOut)),
   ].filter(Boolean).join(" · ");
   const rows = keys.map((k) => [callLabel(k), calls[k]])
-    .concat(asked.map((q) => ["질문 · " + q.q.slice(0, 18) + (q.q.length > 18 ? "…" : ""), q.cost]));
-  $("#cost-table").innerHTML = "<tr><th>호출</th><th>모델</th><th>시간</th><th>첫 글자</th><th>입력</th><th>출력</th></tr>" +
-    rows.map(([label, c]) => "<tr><td>" + esc(label) + "</td><td>" + esc(c.model && c.model !== "default" ? c.model : "기본") + "</td><td>" +
-      (c.seconds != null ? c.seconds + "초" : "") + "</td><td>" + (c.first_text != null ? c.first_text + "초" : "") +
+    .concat(asked.map((q) => [t("costQuestion", q.q.slice(0, 18) + (q.q.length > 18 ? "…" : "")), q.cost]));
+  $("#cost-table").innerHTML = "<tr>" + ["thCall", "thModel", "thTime", "thFirst", "thIn", "thOut"].map((k) => "<th>" + t(k) + "</th>").join("") + "</tr>" +
+    rows.map(([label, c]) => "<tr><td>" + esc(label) + "</td><td>" + esc(c.model && c.model !== "default" ? c.model : t("modelDefault")) + "</td><td>" +
+      (c.seconds != null ? t("seconds", c.seconds) : "") + "</td><td>" + (c.first_text != null ? t("seconds", c.first_text) : "") +
       "</td><td>" + tokens(inputOf(c)) + "</td><td>" + tokens(c.output || 0) + "</td></tr>").join("");
   panel.hidden = false;
 }
@@ -80,5 +80,5 @@ export function etaText() {
   ];
   const secs = left.reduce((s, n) => s + Math.ceil(n / 6) * avg, 0);
   if (secs < 3) return "";
-  return "판결까지 약 " + (secs >= 90 ? Math.round(secs / 60) + "분" : Math.max(5, Math.round(secs / 5) * 5) + "초");
+  return t("eta", secs >= 90 ? t("minutes", Math.round(secs / 60)) : t("seconds", Math.max(5, Math.round(secs / 5) * 5)));
 }

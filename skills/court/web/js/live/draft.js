@@ -5,17 +5,18 @@ import { md, esc } from "../core/markdown.js";
 import { cast, spotlight, talking } from "../stage/cast.js";
 import { say } from "../stage/bubble.js";
 import { logEl, avatar, nearBottom, follow } from "../transcript/messages.js";
+import { t } from "../core/i18n.js";
 
 /**
  * The pieces the replay waits on, in order. Juror drafts are not shown: votes are revealed one by one.
  * @type {{key: string, actor: string, name: string, tag: string, side: string, tone: import("../types.js").Tone}[]}
  */
 const DRAFT_SLOTS = [
-  { key: "opening/prosecution", actor: "prosecution", name: "검사", tag: "모두진술 작성 중", side: "left", tone: "pros" },
-  { key: "opening/defense", actor: "defense", name: "변호인", tag: "모두진술 작성 중", side: "right", tone: "def" },
-  { key: "rebuttal/prosecution", actor: "prosecution", name: "검사", tag: "반박 작성 중", side: "left", tone: "pros" },
-  { key: "rebuttal/defense", actor: "defense", name: "변호인", tag: "반박 작성 중", side: "right", tone: "def" },
-  { key: "judge/judge", actor: "judge", name: "판사", tag: "판결문 작성 중", side: "center judge", tone: "" },
+  { key: "opening/prosecution", actor: "prosecution", name: t("prosecution"), tag: t("draftOpening"), side: "left", tone: "pros" },
+  { key: "opening/defense", actor: "defense", name: t("defense"), tag: t("draftOpening"), side: "right", tone: "def" },
+  { key: "rebuttal/prosecution", actor: "prosecution", name: t("prosecution"), tag: t("draftRebuttal"), side: "left", tone: "pros" },
+  { key: "rebuttal/defense", actor: "defense", name: t("defense"), tag: t("draftRebuttal"), side: "right", tone: "def" },
+  { key: "judge/judge", actor: "judge", name: t("judge"), tag: t("draftJudge"), side: "center judge", tone: "" },
 ];
 
 /** The draft message on screen, if any. @type {{key: string, text: string, el: HTMLElement | null}} */

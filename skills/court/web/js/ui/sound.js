@@ -2,6 +2,7 @@
 // Sound effects, synthesised with Web Audio (no sound files). Off until the viewer turns them on.
 import { $ } from "../core/dom.js";
 import { loadPref, savePref } from "../core/prefs.js";
+import { t } from "../core/i18n.js";
 
 /** @type {{on: boolean, ctx: AudioContext | null}} */
 const audio = { on: false, ctx: null };
@@ -75,7 +76,7 @@ export function playSound(name) {
 function showSoundState() {
   const b = $("#b-sound");
   b.textContent = audio.on ? "🔊" : "🔇";
-  b.title = audio.on ? "효과음 끄기" : "효과음 켜기";
+  b.title = audio.on ? t("soundOff") : t("soundOn");
   b.setAttribute("aria-label", b.title);
   b.setAttribute("aria-pressed", String(audio.on));
 }

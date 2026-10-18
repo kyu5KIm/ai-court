@@ -2,10 +2,11 @@
 // Light / dark switch. "auto" follows the system; the colour tokens read <html data-theme>.
 import { $ } from "../core/dom.js";
 import { loadPref, savePref } from "../core/prefs.js";
+import { t } from "../core/i18n.js";
 
 const THEMES = ["auto", "light", "dark"];
 /** @type {Record<string, [string, string]>} */
-const THEME_LABEL = { auto: ["◐", "화면: 시스템 설정"], light: ["☀", "화면: 밝게"], dark: ["☾", "화면: 어둡게"] };
+const THEME_LABEL = { auto: ["◐", t("themeAuto")], light: ["☀", t("themeLight")], dark: ["☾", t("themeDark")] };
 
 /** @param {string} mode */
 function applyTheme(mode) {

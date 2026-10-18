@@ -3,7 +3,7 @@
 import { player, waitingForMore } from "../core/state.js";
 import { $ } from "../core/dom.js";
 import { esc } from "../core/markdown.js";
-import { PHASES } from "../core/constants.js";
+import { t, PHASE_NAMES } from "../core/i18n.js";
 import { seekTo } from "./player.js";
 
 const timelineView = { built: -1 };
@@ -20,10 +20,10 @@ export function renderTimeline() {
   if (timelineView.built !== player.scenes.length + (more ? 0.5 : 0)) {
     timelineView.built = player.scenes.length + (more ? 0.5 : 0);
     bar.innerHTML = player.scenes.map((sc, i) => {
-      const label = sc.kind === "verdict" ? "평결" : (sc.name || "") + (sc.tag ? " · " + sc.tag : "");
+      const label = sc.kind === "verdict" ? t("verdictWord") : (sc.name || "") + (sc.tag ? " · " + sc.tag : "");
       return '<button type="button" class="tl p' + sc.phase + (sc.kind === "verdict" ? " verdict" : "") +
         '" data-i="' + i + '" title="' + esc((i + 1) + ". " + label) + '" aria-label="' + esc(label) + '"></button>';
-    }).join("") + (more ? '<span class="tl more" title="아직 진행 중이에요"></span>' : "");
+    }).join("") + (more ? '<span class="tl more" title="' + t("stillRunning") + '"></span>' : "");
     bar.hidden = player.scenes.length === 0;
   }
   const now = currentScene();
@@ -47,5 +47,5 @@ export function setupTimeline() {
     const first = player.scenes.findIndex((sc) => sc.phase === phase);
     if (first >= 0) seekTo(first);
   });
-  Array.from($("#phases").children).forEach((li, i) => li.setAttribute("title", PHASES[i] + "(으)로 이동"));
+  Array.from($("#phases").children).forEach((li, i) => li.setAttribute("title", t("goTo", PHASE_NAMES[i])));
 }

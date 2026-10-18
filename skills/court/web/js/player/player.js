@@ -13,6 +13,7 @@ import { buildScenes } from "./scenes.js";
 import { sync, setNow } from "./controls.js";
 import { waitingFx } from "../live/status.js";
 import { clearDraft } from "../live/draft.js";
+import { t } from "../core/i18n.js";
 
 /**
  * Start a scene. `manual` (the user pressed next) always scrolls it into view.
@@ -24,7 +25,7 @@ function play(sc, manual) {
   const stick = !!manual || player.idx === 1 || nearBottom();
   setPhase(sc.phase);
   spotlight(sc.actor);
-  setNow(sc.kind === "verdict" ? "판사 · 평결 낭독" : (sc.name || "") + (sc.tag ? " · " + sc.tag : ""), true);
+  setNow(sc.kind === "verdict" ? t("verdictReading") : (sc.name || "") + (sc.tag ? " · " + sc.tag : ""), true);
   say(null);
   const el = sceneEl(sc);
   logEl().appendChild(el);
@@ -123,7 +124,7 @@ export function restart() {
   say(null);
   setScore(0, 0, false);
   setPhase(-1);
-  setNow("개정을 기다리는 중이에요", false);
+  setNow(t("waitingOpen"), false);
   renderIntro();
   sync();
 }
@@ -148,7 +149,7 @@ export function showAll() {
   applyScenes(player.scenes.length);
   settleCast();
   say(null);
-  setNow("재판 기록 전체", true);
+  setNow(t("wholeRecord"), true);
   sync();
 }
 
