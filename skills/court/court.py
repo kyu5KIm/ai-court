@@ -277,9 +277,23 @@ def trial_data(state):
                        for ph in ("opening", "rebuttal") for side in ("prosecution", "defense")],
         "jurors": [dict(row, lens=j["lens"], voted=v) for row, j, v in zip(t["jurors"], state["jury"], voted)],
         "phase": phase, "finished": phase == "done", "questions": load_questions(state),
-        "runner": read_json(os.path.join(state["dir"], "runner.json")),
+        "runner": read_json(os.path.join(state["dir"], "runner.json")), "drafts": read_drafts(state),
         "dir": os.path.abspath(state["dir"]), "seed": state.get("seed"), "live": False,
     }
+
+
+def read_drafts(state):
+    """Replies still being written, by "<phase>/<job id>"."""
+    out = {}
+    for phase in PHASES:
+        for job in jobs(state, phase):
+            path = draft_path(job)
+            if os.path.exists(path) and not done(job):
+                try:
+                    out["%s/%s" % (phase, job["id"])] = read_text(path)
+                except OSError:
+                    pass
+    return out
 
 
 def read_json(path):
@@ -290,10 +304,58 @@ def read_json(path):
         return None
 
 
-def write_json(path, obj):
+def write_text(path, text, tries=20):
+    """Replace a file in one step, so a reader never sees half of it.
+
+    On Windows the swap fails while another thread has the file open (the page server reads these
+    files every second or two), so it retries for about a second before giving up.
+    """
     with open(path + ".tmp", "w", encoding="utf-8") as f:
-        json.dump(obj, f, ensure_ascii=False, indent=2)
-    os.replace(path + ".tmp", path)
+        f.write(text)
+    for i in range(tries):
+        try:
+            os.replace(path + ".tmp", path)
+            return
+        except PermissionError:
+            if i == tries - 1:
+                raise
+            time.sleep(0.05)
+
+
+def write_json(path, obj):
+    write_text(path, json.dumps(obj, ensure_ascii=False, indent=2))
+
+
+def draft_path(job):
+    """Where a call's reply-so-far is kept while it streams."""
+    return job["output"] + ".draft"
+
+
+def write_draft(path, text):
+    """Best effort: if a reader holds the draft, skip; the next update lands."""
+    try:
+        write_text(path, text, tries=1)
+    except OSError:
+        pass
+
+
+def drop_draft(path):
+    try:
+        os.remove(path)
+    except OSError:
+        pass
+
+
+def throttled(fn, every=0.4):
+    """fn, called at most once per `every` seconds; the calls in between are dropped."""
+    last = [0.0]
+
+    def call(*a):
+        now = time.time()
+        if now - last[0] >= every:
+            last[0] = now
+            fn(*a)
+    return call
 
 
 # The courtroom page lives in web/ as plain files: index.html, styles/*.css and ES modules under js/.
@@ -469,28 +531,97 @@ def claude_logged_in(claude):
         return True  # can't tell; let the first question find out
 
 
-def claude_text(claude, model, prompt, cwd, timeout=600):
-    """One tool-less `claude -p` call: the prompt in, the reply text out."""
+# A short system prompt in place of Claude Code's default one (about 9,000 tokens of coding-agent
+# instructions these roles never use). The role itself is in the user message.
+TRIAL_SYSTEM = ("You play one part in a structured trial of an idea. You have no tools: everything you know "
+                "is in the user's message. Follow the brief in it exactly and reply only with the text it asks for.")
+QUESTION_SYSTEM = ("You answer one question as a participant in a trial, using only the trial record in the "
+                   "user's message. Stay in your role and follow the message's instructions on language and length.")
+
+
+def claude_call(claude, model, prompt, cwd, timeout=600, on_text=None, system=None):
+    """One tool-less `claude -p` call, streamed. `system` replaces the default system prompt.
+
+    `on_text(reply_so_far)` runs as the reply grows. Returns the reply and what the call cost:
+    {"text", "seconds", "first_text" (seconds until the first words), "input", "cache_read",
+    "cache_write", "output"} (token counts).
+    """
     cmd = [claude, "-p", "--tools", "", "--strict-mcp-config", "--no-session-persistence",
-           "--output-format", "text"]
+           "--output-format", "stream-json", "--verbose", "--include-partial-messages"]
     if model:
         cmd += ["--model", model]
-    r = subprocess.run(cmd, input=prompt, capture_output=True, text=True, encoding="utf-8",
-                       errors="replace", timeout=timeout, env=child_env(), cwd=cwd)
-    out = (r.stdout or "").strip()
-    if r.returncode != 0 or not out:
-        err = (r.stderr or out or "exit code %d" % r.returncode).strip()
+    if system:
+        cmd += ["--system-prompt", system]
+    t0 = time.time()
+    p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                         encoding="utf-8", errors="replace", env=child_env(), cwd=cwd)
+    timer = threading.Timer(timeout, p.kill)
+    timer.start()
+    stderr = []
+    drain = threading.Thread(target=lambda: stderr.append(p.stderr.read()), daemon=True)
+    drain.start()
+    parts, result, first = [], None, None
+    try:
+        p.stdin.write(prompt)
+        p.stdin.close()
+        for line in p.stdout:
+            try:
+                ev = json.loads(line)
+            except ValueError:
+                continue
+            if ev.get("type") == "result":
+                result = ev
+            elif ev.get("type") == "stream_event":
+                delta = ev.get("event", {}).get("delta", {})
+                if delta.get("type") == "text_delta" and delta.get("text"):
+                    if first is None:
+                        first = time.time() - t0
+                    parts.append(delta["text"])
+                    if on_text:
+                        on_text("".join(parts))
+        p.wait()
+    except BaseException:
+        p.kill()
+        raise
+    finally:
+        timed_out = not timer.is_alive() and p.returncode not in (0, None)
+        timer.cancel()
+    drain.join(1)
+    result = result or {}
+    text = (result.get("result") if isinstance(result.get("result"), str) else "".join(parts)).strip()
+    if p.returncode != 0 or result.get("is_error") or not text:
+        err = "timed out after %ds" % timeout if timed_out else \
+            ("".join(stderr) or text or "exit code %s" % p.returncode).strip()
         if "not logged in" in err.lower() or "/login" in err:
             err = NOT_LOGGED_IN
         raise RuntimeError(err[:300])
-    return out
+    usage = result.get("usage") or {}
+    return {"text": text, "seconds": round(time.time() - t0, 1),
+            "first_text": round(first, 1) if first is not None else None,
+            "input": usage.get("input_tokens", 0), "cache_read": usage.get("cache_read_input_tokens", 0),
+            "cache_write": usage.get("cache_creation_input_tokens", 0), "output": usage.get("output_tokens", 0)}
+
+
+def cost_line(c):
+    """A one-line summary of a claude_call() result, for logs."""
+    first = " (first words %.1fs)" % c["first_text"] if c.get("first_text") is not None else ""
+    return "%.1fs%s, %d tokens in (%d cached), %d out" % (
+        c["seconds"], first, c["input"] + c["cache_read"] + c["cache_write"], c["cache_read"], c["output"])
 
 
 def answer_question(state, rec, claude, model, slots):
     """Answer one question with a tool-less `claude -p` call that sees only the trial record."""
     with slots:
         try:
-            rec.update(status="done", answer=claude_text(claude, model, ask_prompt(state, rec), state["dir"], 300))
+            def partial(text):
+                rec["answer"] = text
+                try:
+                    save_question(state, rec)
+                except OSError:
+                    pass
+            c = claude_call(claude, model, ask_prompt(state, rec), state["dir"], 300, system=QUESTION_SYSTEM,
+                            on_text=throttled(partial))
+            rec.update(status="done", answer=c["text"], cost={k: v for k, v in c.items() if k != "text"})
         except Exception as e:
             rec.update(status="error", answer="답변을 받지 못했어요: %s" % e)
         rec["answered"] = time.strftime("%Y-%m-%dT%H:%M:%S")
@@ -543,27 +674,45 @@ def headless_prompt(state, phase, job):
     return text
 
 
-def set_runner(state, status, message="", phase=None):
+def set_runner(state, status, message="", phase=None, calls=None, seconds=None):
+    """runner.json: how a page-filed trial is going, and what each claude call cost."""
     write_json(os.path.join(state["dir"], "runner.json"),
-               {"status": status, "message": message, "phase": phase, "at": time.strftime("%Y-%m-%dT%H:%M:%S")})
+               {"status": status, "message": message, "phase": phase, "at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                "seconds": seconds, "calls": calls or {}})
 
 
-def run_trial(state, claude, model=None, log=print):
+# Models the page may pick for the jury: the CLI's aliases, or "" for the same model as everyone else.
+JURY_MODELS = ("", "haiku", "sonnet", "opus")
+
+
+def run_trial(state, claude, model=None, log=print, jury_model=None, parallel=WAVE):
     """Drive a whole trial with `claude -p` calls in place of the clerk's sub-agents.
 
     Same phases, briefs and retry rules as SKILL.md: each phase's missing jobs run in parallel, missing
     ones are retried once, a juror that fails twice gets NO VOTE, anything else that fails twice stops
-    the trial.
+    the trial. `jury_model` runs the jurors on a different (usually faster) model than the other roles.
+    `parallel` caps how many calls of one phase run at once (1 to 12); more is faster for a big jury but
+    more likely to hit the plan's rate limit.
     """
     from concurrent.futures import ThreadPoolExecutor
 
+    t0 = time.time()
+    calls, lock = {}, threading.Lock()
+
     def run_job(phase, job):
         try:
-            out = claude_text(claude, model, headless_prompt(state, phase, job), state["dir"])
-            with open(job["output"], "w", encoding="utf-8") as f:
-                f.write(out + "\n")
-            log("court: %s %s done" % (phase, job["id"]))
+            use = (jury_model or model) if phase == "jury" else model
+            draft = draft_path(job)
+            c = claude_call(claude, use, headless_prompt(state, phase, job), state["dir"], system=TRIAL_SYSTEM,
+                            on_text=throttled(lambda text: write_draft(draft, text)))
+            write_text(job["output"], c["text"] + "\n")
+            drop_draft(draft)
+            with lock:
+                calls["%s/%s" % (phase, job["id"])] = dict({k: v for k, v in c.items() if k != "text"},
+                                                          model=use or "default")
+            log("court: %s %s done in %s" % (phase, job["id"], cost_line(c)))
         except Exception as e:
+            drop_draft(draft_path(job))
             log("court: %s %s failed: %s" % (phase, job["id"], e))
             return str(e)
         return None
@@ -577,11 +726,11 @@ def run_trial(state, claude, model=None, log=print):
                 todo = missing(state, phase)
                 if not todo:
                     break
-                set_runner(state, "running", "", phase)
+                set_runner(state, "running", "", phase, calls, round(time.time() - t0, 1))
                 for j in jobs(state, phase):
                     with open(j["brief"], "w", encoding="utf-8") as f:
                         f.write(brief_text(state, phase, j))
-                with ThreadPoolExecutor(max_workers=WAVE) as pool:
+                with ThreadPoolExecutor(max_workers=max(1, min(parallel, DEFAULT_JURY))) as pool:
                     errors = [e for e in pool.map(lambda j: run_job(phase, j), todo) if e]
             todo = missing(state, phase)
             if todo and phase == "jury":
@@ -594,10 +743,11 @@ def run_trial(state, claude, model=None, log=print):
                 stage = {"opening": "모두진술", "rebuttal": "반박", "judge": "판결"}[phase]
                 raise RuntimeError("%s 단계에서 %s의 답을 받지 못했어요: %s" % (stage, who, reason))
         render(state)
-        set_runner(state, "done")
-        log("court: the trial is over: %s" % verdict_line(count_votes(state)))
+        seconds = round(time.time() - t0, 1)
+        set_runner(state, "done", "", None, calls, seconds)
+        log("court: the trial is over in %.0fs: %s" % (seconds, verdict_line(count_votes(state))))
     except Exception as e:
-        set_runner(state, "error", str(e)[:300])
+        set_runner(state, "error", str(e)[:300], None, calls, round(time.time() - t0, 1))
         log("court: the trial stopped: %s" % e)
 
 
@@ -608,13 +758,61 @@ def cmd_run(args):
         sys.exit("court: the claude CLI is not on PATH")
     state = load_state()
     print("court: running %s with claude -p" % state["dir"], flush=True)
-    run_trial(state, claude, args.model, log=lambda m: print(m, flush=True))
+    run_trial(state, claude, args.model, log=lambda m: print(m, flush=True), jury_model=args.jury_model,
+              parallel=args.parallel)
+
+
+RUN_NAME_RE = re.compile(r"^[\w-]{1,64}$")
+
+
+def run_path(root, name):
+    """The folder of trial `name` under root/.court, or None if that is not a trial there.
+
+    Names come from the page, so only plain folder names are accepted (no separators, no "..").
+    """
+    if not name or not RUN_NAME_RE.match(name):
+        return None
+    rd = os.path.join(root, ROOT, name)
+    return rd if os.path.isfile(os.path.join(rd, "state.json")) else None
+
+
+def latest_run(root):
+    """The folder name .court/LATEST points at, or an empty string."""
+    try:
+        return re.split(r"[\\/]", read_text(os.path.join(root, LATEST)).strip())[-1]
+    except OSError:
+        return ""
+
+
+def list_trials(root):
+    """Every trial under root/.court, newest first, with what the past-trials list shows."""
+    base = os.path.join(root, ROOT)
+    latest = latest_run(root)
+    out = []
+    for name in sorted(os.listdir(base), reverse=True) if os.path.isdir(base) else []:
+        rd = run_path(root, name)
+        if not rd:
+            continue
+        try:
+            state = load_state(rd)
+            state["dir"] = rd
+            lines = [l.strip().lstrip("#").strip() for l in read_text(os.path.join(rd, "case.md")).splitlines()]
+            t = count_votes(state)
+            voted = all(done(j) for j in jobs(state, "jury"))
+            out.append({"run": name, "case": next((l for l in lines if l), "")[:140],
+                        "created": state.get("created"), "jury": len(state["jury"]), "seed": state.get("seed"),
+                        "finished": next_phase(state) == "done", "verdict": t["verdict"] if voted else None,
+                        "guilty": t["guilty"], "not_guilty": t["not_guilty"], "latest": name == latest})
+        except (OSError, ValueError, KeyError):
+            continue
+    return out
 
 
 def cmd_serve(args):
     import http.server
     import secrets
     import shutil
+    from urllib.parse import urlsplit, parse_qs
 
     claude = os.environ.get("COURT_CLAUDE") or shutil.which("claude")
     token = secrets.token_urlsafe(18)
@@ -622,7 +820,15 @@ def cmd_serve(args):
     slots = threading.Semaphore(2)
     cfg = {"port": None, "login": False, "fixed": os.path.abspath(args.run) if args.run else None, "runner": None}
 
-    def current():
+    def current(run=None):
+        """The trial to show: `run` if the page asked for one, else the --run folder, else the latest."""
+        if run:
+            rd = run_path(root, run)
+            if not rd:
+                raise ValueError("no trial named %r" % run)
+            state = load_state(rd)
+            state["dir"] = rd
+            return state
         rd = cfg["fixed"]
         if not rd:
             with open(os.path.join(root, LATEST), encoding="utf-8") as f:
@@ -655,11 +861,17 @@ def cmd_serve(args):
         def do_GET(self):
             if not self.host_ok():
                 return self.send(403, "forbidden", "text/plain")
-            path = self.path.split("?")[0]
-            if path not in ("/", "/trial.html", "/api/state"):
+            url = urlsplit(self.path)
+            path, run = url.path, (parse_qs(url.query).get("run") or [""])[0]
+            if path not in ("/", "/trial.html", "/api/state", "/api/trials"):
                 return self.send(404, "not found", "text/plain")
+            if path == "/api/trials":
+                return self.send_json(200, list_trials(root))
+            if run and not run_path(root, run):
+                return self.send(404, "court: no trial named %s" % run, "text/plain; charset=utf-8")
             try:
-                data = trial_data(current())
+                data = trial_data(current(run))
+                data["run"] = os.path.basename(os.path.normpath(data["dir"]))
             except (OSError, ValueError):
                 data = {"empty": True, "case": "", "judge": "", "statements": [], "jurors": [], "questions": [],
                         "verdict": "", "guilty": 0, "not_guilty": 0, "no_vote": 0, "phase": "none",
@@ -689,9 +901,9 @@ def cmd_serve(args):
             if self.path == "/api/trial":
                 return self.new_trial(body)
             try:
-                state = current()
+                state = current(str(body.get("run") or "") or None)
             except (OSError, ValueError):
-                return self.send_json(400, {"error": "아직 열린 재판이 없어요"})
+                return self.send_json(400, {"error": "그 재판을 찾을 수 없어요"})
             who, text = str(body.get("who", "")), str(body.get("q", "")).strip()
             if who not in roles(state) or not text or len(text) > 600:
                 return self.send_json(400, {"error": "누구에게 무엇을 물을지 확인해 주세요 (600자 이내)"})
@@ -711,6 +923,9 @@ def cmd_serve(args):
                 return self.send_json(400, {"error": "사건은 10자 이상 6000자 이하로 적어 주세요"})
             if not 3 <= n <= 12:
                 return self.send_json(400, {"error": "배심원은 3명에서 12명 사이예요"})
+            jury_model = str(body.get("jury_model") or "").strip() or args.jury_model or ""
+            if jury_model not in JURY_MODELS and jury_model != args.jury_model:
+                return self.send_json(400, {"error": "배심원 모델은 haiku, sonnet, opus 중에서 골라 주세요"})
             if not cfg["login"]:
                 return self.send_json(503, {"error": NOT_LOGGED_IN})
             with QLOCK:
@@ -720,9 +935,11 @@ def cmd_serve(args):
                 state["dir"] = os.path.join(root, state["dir"])
                 cfg["fixed"] = None
                 cfg["runner"] = threading.Thread(target=run_trial, daemon=True,
-                                                 args=(state, claude, args.model, lambda m: print(m, flush=True)))
+                                                 args=(state, claude, args.model, lambda m: print(m, flush=True),
+                                                       jury_model or None, args.parallel))
                 cfg["runner"].start()
-            print("court: trial opened from the page in %s (jury of %d)" % (state["dir"], n), flush=True)
+            print("court: trial opened from the page in %s (jury of %d%s)" % (
+                state["dir"], n, ", jurors on " + jury_model if jury_model else ""), flush=True)
             self.send_json(200, {"dir": os.path.abspath(state["dir"]), "calls": n + 5})
 
     server = None
@@ -840,10 +1057,14 @@ def main(argv=None):
         sub.add_parser(name)
     pr = sub.add_parser("run")
     pr.add_argument("--model", help="model for every role (default: claude's default)")
+    pr.add_argument("--jury-model", help="model for the jurors only, e.g. haiku (default: same as --model)")
+    pr.add_argument("--parallel", type=int, default=WAVE, help="calls run at once per phase, 1-12 (default 6)")
     ps = sub.add_parser("serve")
     ps.add_argument("--port", type=int, default=8765)
     ps.add_argument("--run", help="trial folder to serve (default: the latest, followed as new trials open)")
-    ps.add_argument("--model", help="model for answering questions (default: claude's default)")
+    ps.add_argument("--model", help="model for page-filed trials and questions (default: claude's default)")
+    ps.add_argument("--jury-model", help="default jury model for page-filed trials, e.g. haiku")
+    ps.add_argument("--parallel", type=int, default=WAVE, help="calls run at once per phase, 1-12 (default 6)")
     args = p.parse_args(argv)
     if not args.cmd:
         p.print_help()

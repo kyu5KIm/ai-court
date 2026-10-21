@@ -20,6 +20,7 @@ export function avatar(actor) {
 /** The message element for a scene. @param {import("../types.js").Scene} sc */
 export function sceneEl(sc) {
   const el = document.createElement("article");
+  el.dataset.actor = sc.actor;
   if (sc.kind === "verdict" && sc.verdict) {
     el.className = "verdict " + sc.verdict[2];
     el.innerHTML = sc.html;

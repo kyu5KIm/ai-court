@@ -5,16 +5,20 @@ import { $ } from "../core/dom.js";
 import { esc } from "../core/markdown.js";
 import { clock, walkMs, nextSpeed } from "../core/clock.js";
 import { step, setPlaying, restart, showAll } from "./player.js";
+import { openHelp } from "../ui/help.js";
+import { renderTimeline } from "./timeline.js";
+import { t } from "../core/i18n.js";
 
 /** Bring the button labels in line with the player. */
 export function sync() {
   const none = player.idx >= player.scenes.length && !player.cur;
-  $("#b-play").textContent = player.playing ? "⏸ 멈춤"
-    : isOver() ? "↺ 다시 보기"
-    : player.idx === 0 ? "▶ 재판 시작" : "▶ 재생";
+  $("#b-play").textContent = player.playing ? t("pause")
+    : isOver() ? t("replay")
+    : player.idx === 0 ? t("start") : t("play");
   $("#b-next").disabled = none;
   $("#b-all").disabled = none;
   $("#b-speed").textContent = clock.speed + "×";
+  renderTimeline();
 }
 
 /** @param {number} s */
@@ -48,5 +52,6 @@ export function bindControls() {
     if (e.key === " ") { e.preventDefault(); togglePlay(); }
     else if (e.key === "ArrowRight") { e.preventDefault(); step(true); }
     else if (e.key === "Home") { e.preventDefault(); restart(); }
+    else if (e.key === "?") { e.preventDefault(); openHelp(); }
   });
 }

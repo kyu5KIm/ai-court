@@ -3,9 +3,10 @@
 
 /**
  * The trial data and connection state.
- * @type {{data: import("../types.js").CourtData, token: string, online: boolean}}
+ * `run` is set when the page was opened as ?run=NAME to look at an older trial.
+ * @type {{data: import("../types.js").CourtData, token: string, online: boolean, run: string}}
  */
-export const app = { data: /** @type {any} */ (null), token: "", online: true };
+export const app = { data: /** @type {any} */ (null), token: "", online: true, run: "" };
 
 /**
  * The replay: the scene list, the next scene to play, and the scene being revealed.

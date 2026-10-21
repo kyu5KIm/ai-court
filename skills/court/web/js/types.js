@@ -33,12 +33,15 @@
  * @property {string} q
  * @property {"pending" | "done" | "error"} status
  * @property {string} answer
+ * @property {any} [cost]  the answering call's time and tokens
  */
 
 /**
  * @typedef {object} Runner
  * @property {"running" | "done" | "error"} status
  * @property {string} message
+ * @property {number | null} [seconds]  time since the trial started
+ * @property {Record<string, any>} [calls]  per call: seconds, first_text, input, cache_read, cache_write, output, model
  */
 
 /**
@@ -56,6 +59,7 @@
  * @property {boolean} finished
  * @property {Question[]} [questions]
  * @property {Runner | null} [runner]
+ * @property {Record<string, string>} [drafts]  replies still being written, by "<phase>/<job id>"
  * @property {string} dir
  * @property {number | null} [seed]
  * @property {boolean} live      true when served by `court.py serve`

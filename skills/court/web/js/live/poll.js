@@ -7,6 +7,11 @@ import { mergeScenes } from "../player/player.js";
 import { fetchState } from "./api.js";
 import { syncQuestions } from "./questions.js";
 import { waitingFx } from "./status.js";
+import { updateDraft } from "./draft.js";
+import { renderChips } from "./chips.js";
+import { renderCost } from "./cost.js";
+import { updateShareButton } from "../ui/share.js";
+import { updateRetrialButton } from "./retrial.js";
 
 async function pollOnce() {
   try {
@@ -16,7 +21,12 @@ async function pollOnce() {
     app.data = next;
     mergeScenes();
     syncQuestions();
+    renderChips();
+    renderCost();
+    updateShareButton();
+    updateRetrialButton();
     liveBadge();
+    updateDraft();
   } catch (e) {
     app.online = false;
     waitingFx();

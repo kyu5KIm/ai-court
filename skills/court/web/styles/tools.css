@@ -1,0 +1,8 @@
+/* Header tools in two groups: trial (past trials, retrial, image, print) and view (theme, help, language). */
+.tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.tool-group{display:flex;align-items:center;gap:2px;padding:3px;border:1px solid var(--line);border-radius:999px;background:var(--panel)}
+.tool-group:not(:has(> :not([hidden]))){display:none}
+.tool{font-size:13px;padding:5px 12px;border:0;border-radius:999px;background:transparent;color:var(--ink);min-width:32px}
+.tool:hover:not(:disabled){background:var(--panel-2)}
+.tool-group.view .tool{padding:5px 10px;font-weight:600}
+.tool[aria-pressed="true"]{background:var(--wood);color:#fff}

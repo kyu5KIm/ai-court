@@ -12,17 +12,20 @@ import { renderIntro, markIntroStarted } from "../transcript/intro.js";
 import { buildScenes } from "./scenes.js";
 import { sync, setNow } from "./controls.js";
 import { waitingFx } from "../live/status.js";
+import { clearDraft } from "../live/draft.js";
+import { t } from "../core/i18n.js";
 
 /**
  * Start a scene. `manual` (the user pressed next) always scrolls it into view.
  * @param {import("../types.js").Scene} sc @param {boolean} [manual]
  */
 function play(sc, manual) {
+  clearDraft();
   clearTimers();
   const stick = !!manual || player.idx === 1 || nearBottom();
   setPhase(sc.phase);
   spotlight(sc.actor);
-  setNow(sc.kind === "verdict" ? "판사 · 평결 낭독" : (sc.name || "") + (sc.tag ? " · " + sc.tag : ""), true);
+  setNow(sc.kind === "verdict" ? t("verdictReading") : (sc.name || "") + (sc.tag ? " · " + sc.tag : ""), true);
   say(null);
   const el = sceneEl(sc);
   logEl().appendChild(el);
@@ -54,7 +57,7 @@ function tick() {
   it.classList.remove("pending");
   it.classList.add("shown");
   if (c.i >= c.items.length) c.el.classList.remove("typing");
-  if (!it.classList.contains("path")) say(cast[c.sc.actor], itemText(it), c.sc.tone);
+  if (!it.classList.contains("path") && !it.classList.contains("action")) say(cast[c.sc.actor], itemText(it), c.sc.tone);
   follow(it, stick);
   const len = (it.textContent || "").length;
   later(tick, Math.min(9000, 420 + len * 26) / clock.speed);
@@ -121,27 +124,50 @@ export function restart() {
   say(null);
   setScore(0, 0, false);
   setPhase(-1);
-  setNow("개정을 기다리는 중이에요", false);
+  setNow(t("waitingOpen"), false);
   renderIntro();
   sync();
 }
 
 /** Put every scene there is into the transcript at once, with the stage in its end state. */
-export function showAll() {
-  player.playing = false;
-  if (player.cur) finish();
-  clearTimers();
+/** Put scenes into the transcript at once, up to (not including) `target`, with their end state on stage. @param {number} target */
+function applyScenes(target) {
   markIntroStarted();
-  while (player.idx < player.scenes.length) {
+  while (player.idx < target) {
     const sc = player.scenes[player.idx++];
     setPhase(sc.phase);
     logEl().appendChild(sceneEl(sc));
     if (sc.enter) sc.enter(true);
     if (sc.after) sc.after();
   }
+}
+
+export function showAll() {
+  player.playing = false;
+  if (player.cur) finish();
+  clearTimers();
+  applyScenes(player.scenes.length);
   settleCast();
   say(null);
-  setNow("재판 기록 전체", true);
+  setNow(t("wholeRecord"), true);
+  sync();
+}
+
+/**
+ * Jump to scene `k`: everything before it appears at once, then scene k plays (and the replay keeps
+ * going if it was playing).
+ * @param {number} k
+ */
+export function seekTo(k) {
+  const target = Math.max(0, Math.min(k, player.scenes.length));
+  const wasPlaying = player.playing;
+  restart();
+  applyScenes(target);
+  settleCast(true);
+  say(null);
+  if (target < player.scenes.length) {
+    if (wasPlaying) setPlaying(true); else step(true);
+  }
   sync();
 }
 

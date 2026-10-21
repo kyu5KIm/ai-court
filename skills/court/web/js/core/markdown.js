@@ -1,6 +1,7 @@
 // @ts-check
 // Escaping and the small markdown subset the statements use: headings, lists, bold, code.
 import { SECTION_KO } from "./constants.js";
+import { lang } from "./i18n.js";
 
 /** @param {unknown} s */
 export function esc(s) {
@@ -37,7 +38,7 @@ export function md(text) {
     if ((m = l.match(/^#{1,6}\s+(.*)$/))) {
       flushPara(); closeList();
       const h = m[1].replace(/\*\*/g, "").trim();
-      const ko = SECTION_KO[h.toLowerCase()];
+      const ko = lang === "ko" ? SECTION_KO[h.toLowerCase()] : "";  // English pages keep the judge's headings
       html += "<h4>" + esc(ko || h) + (ko ? ' <span class="en">' + esc(h) + "</span>" : "") + "</h4>";
       continue;
     }

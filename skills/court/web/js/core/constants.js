@@ -17,12 +17,18 @@ export const JUROR_KO = {
   "The Lawyer": ["변호사", "기록에 없는 법적·규제상의 함정이 있는지 봐요."],
 };
 
+/** Jurors grouped by what they look at, for the vote map (labels: GROUP_NAMES in i18n.js). @type {[string, string[]][]} */
+export const LENS_GROUPS = [
+  ["money", ["The Accountant", "The Investor", "The Statistician"]],
+  ["market", ["The First-Time Customer", "The Competitor", "The Teenager", "The Designer"]],
+  ["execution", ["The Engineer", "The Small-Business Owner"]],
+  ["risk", ["The Retired Judge", "The Parent", "The Lawyer"]],
+];
+
 /** Hat colours, one per juror seat. */
 export const HATS = ["#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#14b8a6",
   "#64748b", "#6366f1", "#84cc16", "#0ea5e9", "#a855f7", "#e11d48"];
 
-/** @type {Record<string, string>} */
-export const VOTE_KO = { "GUILTY": "유죄", "NOT GUILTY": "무죄", "NO VOTE": "기권" };
 /** @type {Record<string, string>} */
 export const VOTE_CLS = { "GUILTY": "g", "NOT GUILTY": "n", "NO VOTE": "" };
 
@@ -32,17 +38,6 @@ export const SECTION_KO = {
   "what the defense got right": "변호인이 맞힌 점",
   "conditions for acquittal": "무죄 조건",
   "the sentence": "선고",
-};
-
-/** Phase chips in the header, in order. Scene.phase indexes this. */
-export const PHASES = ["개정", "모두진술", "반박", "평의", "평결", "선고"];
-
-/** What the live page says while court.py works on a phase. @type {Record<string, string>} */
-export const WAIT_KO = {
-  opening: "검사와 변호인이 모두진술을 준비하고 있어요",
-  rebuttal: "양측이 반박을 준비하고 있어요",
-  jury: "배심원이 평의하고 있어요",
-  judge: "판사가 판결문을 쓰고 있어요",
 };
 
 export const ORANGE = "#D97757";

@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="styles/base.css">
 <link rel="stylesheet" href="styles/layout.css">
 <link rel="stylesheet" href="styles/header.css">
+<link rel="stylesheet" href="styles/tools.css">
 <link rel="stylesheet" href="styles/stage.css">
 <link rel="stylesheet" href="styles/characters.css">
 <link rel="stylesheet" href="styles/bubble.css">
@@ -17,52 +18,72 @@
 <link rel="stylesheet" href="styles/transcript.css">
 <link rel="stylesheet" href="styles/motion.css">
 <link rel="stylesheet" href="styles/responsive.css">
+<link rel="stylesheet" href="styles/print.css">
 </head>
 <body>
 <div class="wrap">
   <header class="top">
-    <div>
-      <div class="kicker">COURT · AI 법정<span class="live" id="live"></span></div>
-      <h1 id="case-title"></h1>
+    <div class="brand">
+      <div class="kicker"><span data-i18n="kicker">COURT</span><span class="viewing" id="viewing" hidden></span></div>
+      <div class="title-row">
+        <h1 id="case-title" data-i18n="appName">AI 법정</h1>
+        <span class="live" id="live" aria-live="polite"></span>
+      </div>
+    </div>
+    <div class="tools" id="tools">
+      <div class="tool-group trial" role="group" data-i18n-aria="trialTools" aria-label="재판">
+        <button class="tool" id="b-trials" type="button" data-i18n="trialsBtn" hidden>지난 재판</button>
+        <button class="tool" id="b-retrial" type="button" data-i18n="retrialBtn" data-i18n-title="retrialTitle" hidden>재심</button>
+        <button class="tool" id="b-image" type="button" data-i18n="imageBtn" data-i18n-title="imageTitle" hidden>평결 이미지</button>
+        <button class="tool" id="b-print" type="button" data-i18n="printBtn" data-i18n-title="printTitle">인쇄</button>
+      </div>
+      <div class="tool-group view" role="group" data-i18n-aria="viewTools" aria-label="화면">
+        <button class="tool" id="b-theme" type="button">◐</button>
+        <button class="tool" id="b-help" type="button" data-i18n-title="helpTitle" data-i18n-aria="helpLabel">?</button>
+        <button class="tool" id="b-lang" type="button" data-i18n="langSwitch" data-i18n-title="langTitle">EN</button>
+      </div>
+      <button class="newcase" id="b-new" type="button" data-i18n="newCaseBtn" hidden>＋ 새 사건</button>
     </div>
     <ol class="phases" id="phases"></ol>
-    <button class="newcase" id="b-new" hidden>＋ 새 사건</button>
   </header>
 
   <div class="layout">
-    <section class="stage" id="stage" aria-label="법정">
+    <section class="stage" id="stage" data-i18n-aria="courtroom" aria-label="법정">
       <div class="scene" id="scene">
         <div class="curtain l"></div><div class="curtain r"></div>
         <div class="emblem" aria-hidden="true">⚖</div>
         <div class="wall-trim"></div>
         <div class="jurybox" id="jurybox"></div>
-        <div class="furn bench"><span class="plate">판사</span></div>
-        <div class="furn clerk-desk"><span class="plate">서기</span></div>
-        <div class="furn table pros"><span class="plate">검사</span></div>
-        <div class="furn table def"><span class="plate">변호인</span></div>
+        <div class="furn bench"><span class="plate" data-i18n="benchPlate">판사</span></div>
+        <div class="furn clerk-desk"><span class="plate" data-i18n="clerkPlate">서기</span></div>
+        <div class="furn table pros"><span class="plate" data-i18n="prosPlate">검사</span></div>
+        <div class="furn table def"><span class="plate" data-i18n="defPlate">변호인</span></div>
         <div class="furn lectern"></div>
-        <div class="rail"><span>배심원석</span></div>
+        <div class="rail"><span data-i18n="juryRail">배심원석</span></div>
         <svg class="gavel" id="gavel" viewBox="0 0 64 64" aria-hidden="true">
           <rect class="block" x="2" y="48" width="26" height="8" rx="2"/>
           <g class="arm"><rect x="18" y="19" width="36" height="6" rx="3"/><rect x="6" y="10" width="14" height="24" rx="3"/></g>
         </svg>
-        <div class="score" aria-live="polite"><span>유죄</span><b class="g" id="sg">0</b><span>:</span><b class="n" id="sn">0</b><span>무죄</span></div>
+        <div class="score" aria-live="polite"><span data-i18n="scoreG">유죄</span><b class="g" id="sg">0</b><span>:</span><b class="n" id="sn">0</b><span data-i18n="scoreN">무죄</span></div>
         <div class="bubble" id="bubble"></div><div class="bubble-tail" id="tail"></div>
         <div class="stamp" id="stamp"><b></b><span></span></div>
         <div class="status" id="status"><i></i><span></span></div>
       </div>
-      <div class="now" id="now">개정을 기다리는 중이에요</div>
+      <div class="timeline" id="timeline" role="group" data-i18n-aria="timelineLabel" aria-label="장면 이동" hidden></div>
+      <div class="now" id="now" data-i18n="waitingOpen">개정을 기다리는 중이에요</div>
       <div class="controls">
-        <button id="b-restart" title="처음부터 (Home)">⏮</button>
+        <button id="b-restart" data-i18n-title="restartTitle">⏮</button>
         <button id="b-play" class="primary">▶ 재생</button>
-        <button id="b-next" title="다음 (→)">다음 ⏭</button>
-        <button id="b-speed" title="속도">1×</button>
-        <button id="b-all" title="전체 기록 한 번에 보기">전부</button>
+        <button id="b-next" data-i18n="nextBtn" data-i18n-title="nextTitle">다음 ⏭</button>
+        <button id="b-speed" data-i18n-title="speedTitle">1×</button>
+        <button id="b-all" data-i18n="allBtn" data-i18n-title="allTitle">전부</button>
+        <button id="b-sound" type="button">🔇</button>
       </div>
+      <div class="chips" id="ask-chips" hidden></div>
       <form class="ask" id="ask" autocomplete="off">
-        <select id="ask-who" aria-label="질문할 사람"></select>
-        <input id="ask-q" maxlength="600" placeholder="법정에 질문하기…" aria-label="질문">
-        <button class="primary" id="ask-go" type="submit">묻기</button>
+        <select id="ask-who" data-i18n-aria="askWho"></select>
+        <input id="ask-q" maxlength="600" data-i18n-placeholder="askPlaceholder" data-i18n-aria="askLabel">
+        <button class="primary" id="ask-go" type="submit" data-i18n="askGo">묻기</button>
       </form>
       <p class="ask-note" id="ask-note"></p>
     </section>
@@ -70,32 +91,77 @@
     <main class="log" id="log" aria-live="polite"></main>
   </div>
 
+  <details class="cost" id="cost" hidden>
+    <summary id="cost-summary" data-i18n="costSummary">비용과 시간</summary>
+    <div class="cost-scroll"><table class="cost-table" id="cost-table"></table></div>
+  </details>
+
   <footer class="foot" id="foot"></footer>
 </div>
 
-<dialog id="newcase" aria-labelledby="nc-title">
+<dialog id="help" class="sheet" aria-labelledby="help-title">
+  <div class="sheet-body">
+    <h2 id="help-title" data-i18n="helpHead">단축키</h2>
+    <table class="keys">
+      <tr><td><kbd>Space</kbd></td><td data-i18n="keySpace">재생 / 멈춤</td></tr>
+      <tr><td><kbd>→</kbd></td><td data-i18n="keyNext">다음 장면 (지금 장면은 바로 끝까지)</td></tr>
+      <tr><td><kbd>Home</kbd></td><td data-i18n="keyHome">처음부터</td></tr>
+      <tr><td><kbd>?</kbd></td><td data-i18n="keyHelp">이 도움말</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td data-i18n="keyEsc">열린 창 닫기</td></tr>
+      <tr><td data-i18n="keyPhone">휴대폰</td><td data-i18n="keySwipe">화면을 왼쪽으로 밀면 다음 장면</td></tr>
+    </table>
+    <div class="sheet-actions"><button type="button" class="primary" id="help-close" data-i18n="close">닫기</button></div>
+  </div>
+</dialog>
+
+<dialog id="trials" class="sheet" aria-labelledby="trials-title">
+  <div class="sheet-body">
+    <h2 id="trials-title" data-i18n="trialsHead">지난 재판</h2>
+    <ol class="trial-list" id="trial-list"></ol>
+    <div class="sheet-actions">
+      <button type="button" id="trials-compare" disabled>두 개를 고르면 비교 (0/2)</button>
+      <button type="button" class="primary" id="trials-close" data-i18n="close">닫기</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="compare" class="sheet wide" aria-labelledby="compare-title">
+  <div class="sheet-body">
+    <h2 id="compare-title" data-i18n="compareHead">재판 비교</h2>
+    <div id="compare-body"></div>
+    <div class="sheet-actions"><button type="button" class="primary" id="compare-close" data-i18n="close">닫기</button></div>
+  </div>
+</dialog>
+
+<dialog id="newcase" class="sheet" aria-labelledby="nc-title">
   <form id="nc-form">
-    <h2 id="nc-title">새 사건 접수</h2>
-    <p class="nc-hint">검사, 변호인, 배심원은 여기 적힌 내용만 알아요. 숫자로 적을수록 평결이 구체적이에요.</p>
-    <ul class="nc-tips"><li>쓸 수 있는 돈과 시간</li><li>지금까지 해 본 것과 그 결과</li><li>누구를 상대로 하는지</li><li>가격, 기간, 규모</li></ul>
-    <textarea id="nc-case" maxlength="6000" aria-label="사건 내용"
-      placeholder="예) 회사를 그만두고 온라인으로 수제 캔들을 파는 일을 전업으로 하려고 해. 저축은 800만 원, 3개월 동안 40개를 팔았고 한 개에 3만 원이야. 매달 생활비는 200만 원이야."></textarea>
+    <h2 id="nc-title" data-i18n="ncHead">새 사건 접수</h2>
+    <p class="nc-hint" data-i18n="ncHint">검사, 변호인, 배심원은 여기 적힌 내용만 알아요. 숫자로 적을수록 평결이 구체적이에요.</p>
+    <ul class="nc-tips"><li data-i18n="ncTip1">쓸 수 있는 돈과 시간</li><li data-i18n="ncTip2">지금까지 해 본 것과 그 결과</li><li data-i18n="ncTip3">누구를 상대로 하는지</li><li data-i18n="ncTip4">가격, 기간, 규모</li></ul>
+    <textarea id="nc-case" maxlength="6000" data-i18n-aria="ncCaseLabel" data-i18n-placeholder="ncPlaceholder"></textarea>
     <div class="nc-row">
-      <label>배심원
+      <label><span data-i18n="ncJury">배심원</span>
         <select id="nc-jury">
           <option value="3">3명 · claude 호출 8번</option>
           <option value="6" selected>6명 · claude 호출 11번</option>
           <option value="12">12명 · claude 호출 17번</option>
         </select>
       </label>
-      <label>시드 (배심원 고정)
-        <input id="nc-seed" inputmode="numeric" placeholder="비워 두면 무작위">
+      <label><span data-i18n="ncJuryModel">배심원 모델</span>
+        <select id="nc-jury-model">
+          <option value="" data-i18n="ncSameModel">다른 역할과 같은 모델</option>
+          <option value="haiku" data-i18n="ncHaiku">haiku · 빠르고 적게 씀</option>
+          <option value="sonnet">sonnet</option>
+        </select>
+      </label>
+      <label><span data-i18n="ncSeed">시드 (배심원 고정)</span>
+        <input id="nc-seed" inputmode="numeric" data-i18n-placeholder="ncSeedPlaceholder">
       </label>
     </div>
     <p class="nc-err" id="nc-err"></p>
     <div class="nc-actions">
-      <button type="button" id="nc-cancel">닫기</button>
-      <button class="primary" id="nc-go" type="submit">재판 열기</button>
+      <button type="button" id="nc-cancel" data-i18n="close">닫기</button>
+      <button class="primary" id="nc-go" type="submit" data-i18n="ncGo">재판 열기</button>
     </div>
   </form>
 </dialog>

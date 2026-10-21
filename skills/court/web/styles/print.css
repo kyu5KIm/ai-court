@@ -1,0 +1,16 @@
+/* Printing: the record as a document. The stage, controls and dialogs stay on screen only. */
+@media print{
+  :root:root:root{--bg:#fff;--panel:#fff;--panel-2:#fff;--ink:#000;--muted:#444;--line:#bbb}
+  body{background:#fff}
+  .wrap{max-width:none;padding:0}
+  .stage,.tools,.phases,.intro,.past,.msg.draft,dialog,.live,.cost,.body .action{display:none!important}
+  .layout{display:block}
+  .msg,.verdict{box-shadow:none;max-width:none;animation:none;break-inside:avoid;margin-bottom:10px}
+  .msg.left,.msg.right,.msg.center,.msg.juror{align-self:stretch}
+  .verdict{color:#000;background:#fff!important;border:3px solid #000}
+  .vm{border-color:#000}
+  .vm.g{background:#000}
+  .pending{display:revert}
+  .msg.typing .body::after{display:none}
+  .foot{margin-top:16px}
+}

@@ -2,7 +2,8 @@
 // The people in the courtroom: where they sit, and how they walk, light up and talk.
 import { app } from "../core/state.js";
 import { $ } from "../core/dom.js";
-import { JUROR_KO, HATS } from "../core/constants.js";
+import { HATS } from "../core/constants.js";
+import { t, jurorName, jurorLens } from "../core/i18n.js";
 import { reduced, walkMs } from "../core/clock.js";
 import { sprite } from "./sprite.js";
 
@@ -59,10 +60,10 @@ export function walk(c, pos) {
 
 /** Seat everyone. Jurors fill one row of up to six, or two rows. */
 export function buildCast() {
-  addCharacter("judge", "judge", { x: 50, y: 31 }, 10, undefined, "판사");
-  addCharacter("clerk", "clerk", { x: 25, y: 38 }, 14, undefined, "서기");
-  addCharacter("prosecution", "prosecution", { x: 15, y: 60 }, 30, undefined, "검사");
-  addCharacter("defense", "defense", { x: 85, y: 60 }, 30, undefined, "변호인");
+  addCharacter("judge", "judge", { x: 50, y: 31 }, 10, undefined, t("judge"));
+  addCharacter("clerk", "clerk", { x: 25, y: 38 }, 14, undefined, t("clerk"));
+  addCharacter("prosecution", "prosecution", { x: 15, y: 60 }, 30, undefined, t("prosecution"));
+  addCharacter("defense", "defense", { x: 85, y: 60 }, 30, undefined, t("defense"));
 
   const n = app.data.jurors.length, cols = Math.min(n, 6), rows = Math.ceil(n / cols);
   const rowY = rows === 1 ? [93] : [83, 97];
@@ -70,9 +71,10 @@ export function buildCast() {
   app.data.jurors.forEach((j, i) => {
     const r = Math.floor(i / cols), col = i % cols, inRow = Math.min(cols, n - r * cols);
     const x = inRow === 1 ? 50 : 12 + (76 / (inRow - 1)) * col;
-    const info = JUROR_KO[j.juror] || [j.juror, ""];
+    /** @type {[string, string]} */
+    const info = [jurorName(j.juror), jurorLens(j.juror, j.lens)];
     const c = addCharacter("juror-" + i, "juror", { x, y: rowY[r] }, 40 + r * 2, HATS[i % HATS.length],
-      "배심원 " + (i + 1) + " · " + info[0]);
+      t("jurorLabel", i + 1, info[0]));
     c.info = info;
     jurors.push(c);
   });
@@ -100,12 +102,16 @@ export function resetCast() {
   }
 }
 
-/** Everyone back in their seat, keeping signs and the verdict mood. */
-export function settleCast() {
+/**
+ * Everyone back in their seat, keeping signs and the verdict mood.
+ * @param {boolean} [keepThinking]  leave "…" on jurors still deliberating (jumping into the jury phase)
+ */
+export function settleCast(keepThinking) {
   for (const k in cast) {
     const c = cast[k];
     clearTimeout(c.walkTimer);
-    c.el.classList.remove("walking", "thinking", "talking", "active", "hop", "cheer");
+    c.el.classList.remove("walking", "talking", "active", "hop", "cheer");
+    if (!keepThinking) c.el.classList.remove("thinking");
     place(c, c.home, true);
   }
 }

@@ -1,4 +1,7 @@
 /* Question box under the stage. */
+.chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 8px}
+.chips[hidden]{display:none}
+.chip{font-size:12px;padding:4px 10px;border-radius:999px;background:var(--panel-2);white-space:normal;text-align:left}
 .ask{display:none;gap:6px;padding:0 12px 10px;flex-wrap:wrap}
 .ask.on{display:flex}
 .ask select,.ask input{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);border-radius:8px;padding:7px 8px;min-width:0}

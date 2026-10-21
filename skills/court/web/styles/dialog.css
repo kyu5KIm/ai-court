@@ -1,7 +1,13 @@
-/* New-case dialog. */
-dialog#newcase{border:1px solid var(--line);border-radius:16px;background:var(--panel);color:var(--ink);padding:0;
+/* Dialogs ("sheets"): new case, shortcuts, past trials, comparison. */
+dialog.sheet{border:1px solid var(--line);border-radius:16px;background:var(--panel);color:var(--ink);padding:0;
   width:min(560px,calc(100vw - 32px));max-height:calc(100vh - 32px);box-shadow:0 20px 60px rgba(0,0,0,.35)}
-dialog#newcase::backdrop{background:rgba(20,14,8,.55)}
+dialog.sheet::backdrop{background:rgba(20,14,8,.55)}
+.sheet-body{padding:20px 20px 16px;display:flex;flex-direction:column;gap:12px}
+.sheet-body h2{font-family:var(--serif);margin:0;font-size:20px}
+.sheet-actions{display:flex;gap:8px;justify-content:flex-end}
+.sheet-actions .primary{flex:0 0 auto}
+
+/* New-case dialog. */
 #nc-form{padding:20px 20px 16px;display:flex;flex-direction:column;gap:10px}
 #nc-form h2{font-family:var(--serif);margin:0;font-size:20px}
 .nc-hint{margin:0;font-size:13px;color:var(--muted)}
@@ -17,3 +23,38 @@ dialog#newcase::backdrop{background:rgba(20,14,8,.55)}
 .nc-actions{display:flex;gap:8px;justify-content:flex-end}
 .nc-actions .primary{flex:0 0 auto}
 @media (max-width:520px){ .nc-tips{columns:1} }
+
+/* Past trials. */
+.trial-list{list-style:none;margin:0;padding:0;max-height:min(60vh,520px);overflow:auto;display:flex;flex-direction:column;gap:6px}
+.trial{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2)}
+.trial.here{border-color:var(--gold)}
+.trial a{flex:1;min-width:0;color:inherit;text-decoration:none;display:flex;flex-direction:column}
+.trial a:hover .what{text-decoration:underline}
+.trial .when{font-size:11px;color:var(--muted)}
+.trial .what{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trial .pick input{width:16px;height:16px}
+.badge{flex:none;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--line);color:var(--ink)}
+.badge.g{background:var(--pros);color:#fff}
+.badge.n{background:var(--ng);color:#fff}
+
+/* Comparing two trials. */
+dialog.sheet.wide{width:min(720px,calc(100vw - 32px))}
+.cmp-head{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cmp-col{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2);min-width:0}
+.cmp-col .when{font-size:11px;color:var(--muted)}
+.cmp-col b{font-family:var(--serif);font-size:18px}
+.cmp-col .what{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cmp-sum{margin:0;font-size:13px}
+.cmp-scroll{max-height:min(50vh,420px);overflow:auto}
+.cmp-table{border-collapse:collapse;width:100%;font-size:13px}
+.cmp-table th,.cmp-table td{text-align:left;padding:5px 8px 5px 0;border-bottom:1px solid var(--line)}
+.cmp-table th{color:var(--muted);font-weight:500;font-size:12px}
+.cmp-table tr.flipped td{background:color-mix(in srgb,var(--gold) 14%,transparent);font-weight:600}
+.cmp-table .vote{margin-left:0}
+
+/* Shortcut sheet. */
+.keys{border-collapse:collapse;font-size:14px}
+.keys td{padding:6px 10px 6px 0;border-bottom:1px solid var(--line)}
+.keys tr:last-child td{border-bottom:0}
+kbd{font-family:Consolas,ui-monospace,monospace;font-size:12px;padding:2px 7px;border:1px solid var(--line);border-bottom-width:2px;
+  border-radius:6px;background:var(--panel-2)}
