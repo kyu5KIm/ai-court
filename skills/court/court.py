@@ -14,6 +14,8 @@ and renders the verdict. All state lives in .court/<run>/ in the current directo
     python3 court.py render
     python3 court.py run [--model M]
     python3 court.py serve [--port P] [--run DIR] [--model M]
+    python3 court.py doctor [--call]
+    python3 court.py update [--check | --upstream]
 
 Phases, in order: opening, rebuttal, jury, judge.
 """
@@ -27,6 +29,7 @@ import sys
 import threading
 import time
 
+VERSION = "1.2.0"
 HERE = os.path.dirname(os.path.abspath(__file__))
 WEB = os.path.join(HERE, "web")
 ROOT = ".court"
@@ -403,15 +406,17 @@ def throttled(fn, every=0.4):
 # classic script, so the live server and the saved trial.html are both a single self-contained page.
 LINK_RE = re.compile(r'<link rel="stylesheet" href="([^"]+)">')
 MODULE_RE = re.compile(r'<script type="module" src="([^"]+)"></script>')
-IMPORT_RE = re.compile(r'^import \{[^}]*\} from "(\.{1,2}/[^"]+)";[ \t]*\n', re.M)
+IMPORT_RE = re.compile(r'^import \{([^}]*)\} from "(\.{1,2}/[^"]+)";[ \t]*\n', re.M)
 EXPORT_RE = re.compile(r"^export (?=(?:async )?function |const |let |class )", re.M)
+TOP_NAME_RE = re.compile(r"^(?:async )?(?:function\*?|const|let|class) ([\w$]+)", re.M)
 
 
 def bundle_js(entry):
     """Join an ES module graph into one script, dependencies first.
 
-    Modules must use named imports (`import { a, b } from "./x.js";`) and `export function/const/let/class`.
-    Every top-level name shares one scope after joining, so names must be unique across modules.
+    Modules use named imports (`import { a, b as c } from "./x.js";`) and `export function/const/let/class`.
+    Every top-level name shares one scope after joining, so a name used by two modules is refused here,
+    with both file names, rather than breaking the page at run time.
     """
     order, seen = [], set()
 
@@ -420,17 +425,28 @@ def bundle_js(entry):
         if path in seen:
             return
         seen.add(path)
-        for rel in IMPORT_RE.findall(read_text(path)):
+        for _, rel in IMPORT_RE.findall(read_text(path)):
             visit(os.path.join(os.path.dirname(path), rel))
         order.append(path)
 
+    def aliases(match):
+        """`import { a as b }` joins as `const b = a;`; a plain name needs nothing."""
+        pairs = [re.split(r"\s+as\s+", name.strip()) for name in match.group(1).split(",") if name.strip()]
+        return "".join("const %s = %s;\n" % (p[1], p[0]) for p in pairs if len(p) == 2)
+
     visit(entry)
-    parts = []
+    parts, owner = [], {}
     for path in order:
-        src = EXPORT_RE.sub("", IMPORT_RE.sub("", read_text(path)))
+        src = EXPORT_RE.sub("", IMPORT_RE.sub(aliases, read_text(path)))
         if re.search(r"^\s*(import|export)\b", src, re.M):
             raise ValueError("court: %s uses an import/export the page bundler cannot join" % path)
-        parts.append("// %s\n%s" % (os.path.relpath(path, WEB).replace(os.sep, "/"), src.strip()))
+        rel = os.path.relpath(path, WEB).replace(os.sep, "/")
+        for name in TOP_NAME_RE.findall(src):
+            if name in owner:
+                raise ValueError("court: the top-level name %s is in both %s and %s; rename one, since joined "
+                                 "modules share a scope" % (name, owner[name], rel))
+            owner[name] = rel
+        parts.append("// %s\n%s" % (rel, src.strip()))
     return '(function () {\n"use strict";\n' + "\n\n".join(parts) + "\n})();"
 
 
@@ -1018,8 +1034,7 @@ def run_trial(state, claude, model=None, log=print, jury_model=None, parallel=WA
 
 
 def cmd_run(args):
-    import shutil
-    claude = os.environ.get("COURT_CLAUDE") or shutil.which("claude")
+    claude = find_claude()
     if not claude:
         sys.exit("court: the claude CLI is not on PATH")
     state = load_state(os.path.join(ROOT, args.run)) if args.run else load_state()
@@ -1124,10 +1139,9 @@ def list_trials(root):
 def cmd_serve(args):
     import http.server
     import secrets
-    import shutil
     from urllib.parse import urlsplit, parse_qs
 
-    claude = os.environ.get("COURT_CLAUDE") or shutil.which("claude")
+    claude = find_claude()
     token = secrets.token_urlsafe(18)
     root = os.getcwd()
     slots = threading.Semaphore(2)
@@ -1380,10 +1394,139 @@ def cmd_serve(args):
     elif not cfg["login"]:
         print("court: the claude CLI is not logged in, so questions will fail until you run: claude auth login",
               flush=True)
+    if claude:
+        for problem in cli_problems(claude):
+            print("court: warning: %s; trials may fail. See court.py doctor" % problem, flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         pass
+
+
+# ---------- checking the claude CLI, and updating this skill ----------
+
+# Everything this script asks of the CLI, and the version it was last run against end to end.
+CLI_FLAGS = ("--print", "--tools", "--allowedTools", "--strict-mcp-config", "--no-session-persistence",
+             "--output-format", "--verbose", "--include-partial-messages", "--model", "--system-prompt")
+TESTED_CLI = "2.1.258"
+REPO = "https://github.com/kyu5KIm/ai-court"
+RAW_COURT = "https://raw.githubusercontent.com/kyu5KIm/ai-court/main/skills/court/court.py"
+# The newest commit of the original skill already looked at for this edition.
+UPSTREAM = "alexyc9381/court-skill"
+UPSTREAM_SEEN = "2abd32db25"
+
+
+def find_claude():
+    import shutil
+    return os.environ.get("COURT_CLAUDE") or shutil.which("claude")
+
+
+def cli_problems(claude):
+    """What this script needs from the CLI that its --help no longer lists."""
+    try:
+        r = subprocess.run([claude, "--help"], capture_output=True, text=True, encoding="utf-8", errors="replace",
+                           timeout=30, env=child_env())
+    except (OSError, subprocess.SubprocessError) as e:
+        return ["could not run claude --help: %s" % e]
+    return ["claude --help no longer lists %s" % f for f in CLI_FLAGS if f not in r.stdout]
+
+
+def cmd_doctor(args):
+    """Exit 0 if `court.py run`, the page's trials and its questions should work on this computer."""
+    claude = find_claude()
+    print("court %s, Python %s" % (VERSION, sys.version.split()[0]))
+    if not claude:
+        print("problem: the claude CLI is not on PATH (or set COURT_CLAUDE)")
+        return 1
+    try:
+        v = subprocess.run([claude, "--version"], capture_output=True, text=True, encoding="utf-8", errors="replace",
+                           timeout=30, env=child_env()).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        v = "unknown"
+    print("claude: %s (%s; last tested end to end with %s)" % (claude, v, TESTED_CLI))
+    problems = cli_problems(claude)
+    if not claude_logged_in(claude):
+        problems.append("the claude CLI is not logged in: run claude auth login")
+    if not problems and args.call:
+        try:
+            c = claude_call(claude, "haiku", "Reply with the single word: ready", os.getcwd(), 120, system=TRIAL_SYSTEM)
+            print("test call: %r in %s" % (c["text"][:40], cost_line(c)))
+        except Exception as e:
+            problems.append("a test call failed: %s" % e)
+    for p in problems:
+        print("problem: %s" % p)
+    if not problems:
+        print("court: ready")
+    return 1 if problems else 0
+
+
+def version_tuple(text):
+    return tuple(int(n) for n in re.findall(r"\d+", text)[:3])
+
+
+def in_checkout(path):
+    """A git checkout updates with git, not by having files copied over it."""
+    while True:
+        if os.path.exists(os.path.join(path, ".git")):
+            return True
+        parent = os.path.dirname(path)
+        if parent == path:
+            return False
+        path = parent
+
+
+def apply_update(src, dest):
+    """Copy a fresh skills/court folder over `dest`. web/ is replaced whole so removed files don't linger."""
+    import shutil
+    if not os.path.isfile(os.path.join(src, "court.py")) or not os.path.isdir(os.path.join(src, "web")):
+        raise ValueError("court: %s does not look like the skill folder" % src)
+    shutil.rmtree(os.path.join(dest, "web"), ignore_errors=True)
+    shutil.copytree(os.path.join(src, "web"), os.path.join(dest, "web"))
+    for name in os.listdir(src):
+        if os.path.isfile(os.path.join(src, name)):
+            shutil.copy2(os.path.join(src, name), os.path.join(dest, name))
+
+
+def cmd_update(args):
+    """Only ever runs when asked, and only reaches this edition's own repository and the original's commit list."""
+    import shutil
+    import tempfile
+    import urllib.request
+
+    if args.upstream:
+        with urllib.request.urlopen("https://api.github.com/repos/%s/commits/main" % UPSTREAM, timeout=30) as r:
+            sha = json.load(r)["sha"]
+        if sha.startswith(UPSTREAM_SEEN):
+            print("court: the original (%s) has nothing new since %s" % (UPSTREAM, UPSTREAM_SEEN))
+        else:
+            print("court: the original has new commits: https://github.com/%s/compare/%s...%s" % (
+                UPSTREAM, UPSTREAM_SEEN, sha[:10]))
+        return 0
+    with urllib.request.urlopen(RAW_COURT, timeout=30) as r:
+        found = re.search(r'^VERSION = "([^"]+)"', r.read().decode("utf-8"), re.M)
+    latest = found.group(1) if found else "0"
+    print("court: installed %s, latest %s" % (VERSION, latest))
+    if version_tuple(latest) <= version_tuple(VERSION):
+        print("court: up to date")
+        return 0
+    if args.check:
+        print("court: run `court.py update` to install it")
+        return 0
+    if in_checkout(HERE):
+        print("court: %s is inside a git checkout; update it with git pull" % HERE)
+        return 1
+    git = shutil.which("git")
+    if not git:
+        print("court: updating needs git. Or copy skills/court from %s by hand." % REPO)
+        return 1
+    tmp = tempfile.mkdtemp()
+    try:
+        subprocess.run([git, "clone", "--quiet", "--depth", "1", REPO, os.path.join(tmp, "repo")], check=True)
+        apply_update(os.path.join(tmp, "repo", "skills", "court"), HERE)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    print("court: updated to %s" % latest)
+    return 0
 
 
 # ---------- commands ----------
@@ -1488,10 +1631,19 @@ def main(argv=None):
     ps.add_argument("--model", help="model for page-filed trials and questions (default: claude's default)")
     ps.add_argument("--jury-model", help="default jury model for page-filed trials: haiku, sonnet, opus or mixed")
     ps.add_argument("--parallel", type=int, default=WAVE, help="calls run at once per phase, 1-12 (default 6)")
+    pd = sub.add_parser("doctor")
+    pd.add_argument("--call", action="store_true", help="also make one small real claude call")
+    pu = sub.add_parser("update")
+    pu.add_argument("--check", action="store_true", help="only say whether a newer version exists")
+    pu.add_argument("--upstream", action="store_true", help="say whether the original skill has new commits")
     args = p.parse_args(argv)
     if not args.cmd:
         p.print_help()
         return 1
+    if args.cmd == "doctor":
+        return cmd_doctor(args)
+    if args.cmd == "update":
+        return cmd_update(args)
     {"plan": cmd_plan, "init": cmd_init, "prompts": cmd_prompts, "check": cmd_check,
      "next": cmd_next, "tally": cmd_tally, "render": cmd_render, "run": cmd_run, "serve": cmd_serve}[args.cmd](args)
     return 0

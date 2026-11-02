@@ -187,6 +187,86 @@ class CourtTest(unittest.TestCase):
         self.assertEqual(sorted(used - set(defined)), [])
         self.assertGreater(len(used), 100)
 
+    def test_bundler_names_both_files_when_a_top_level_name_is_reused(self):
+        entry = os.path.join(self.tmp, "entry.js")
+        with open(os.path.join(self.tmp, "a.js"), "w", encoding="utf-8") as f:
+            f.write("export function same() {}\n")
+        with open(entry, "w", encoding="utf-8") as f:
+            f.write('import { same } from "./a.js";\nfunction same() {}\n')
+        with self.assertRaises(ValueError) as e:
+            court.bundle_js(entry)
+        self.assertIn("same", str(e.exception))
+        self.assertIn("a.js", str(e.exception))
+        self.assertIn("entry.js", str(e.exception))
+
+    def test_bundler_joins_an_aliased_import(self):
+        entry = os.path.join(self.tmp, "entry.js")
+        with open(os.path.join(self.tmp, "a.js"), "w", encoding="utf-8") as f:
+            f.write("export function one() {}\nexport const two = 2;\n")
+        with open(entry, "w", encoding="utf-8") as f:
+            f.write('import { one, two as deux } from "./a.js";\none(deux);\n')
+        js = court.bundle_js(entry)
+        self.assertIn("const deux = two;", js)
+        self.assertNotIn("import", js)
+
+    def module_sources(self):
+        out = {}
+        for folder, _, files in os.walk(os.path.join(court.WEB, "js")):
+            for name in files:
+                out[os.path.normpath(os.path.join(folder, name))] = court.read_text(os.path.join(folder, name))
+        return out
+
+    def test_every_imported_name_is_exported_by_its_module(self):
+        """The joined page has one scope, so a mistyped import would only fail when that line runs."""
+        sources = self.module_sources()
+        checked = 0
+        for path, src in sources.items():
+            for names, rel in court.IMPORT_RE.findall(src):
+                target = os.path.normpath(os.path.join(os.path.dirname(path), rel))
+                self.assertIn(target, sources, "%s imports %s" % (path, rel))
+                exported = set(re.findall(r"^export (?:async )?(?:function\*?|const|let|class) ([\w$]+)", sources[target], re.M))
+                for name in names.split(","):
+                    name = re.split(r"\s+as\s+", name.strip())[0]
+                    if name:
+                        self.assertIn(name, exported, "%s imports %s from %s" % (path, name, rel))
+                        checked += 1
+        self.assertGreater(checked, 100)
+
+    def test_every_element_the_scripts_look_up_is_on_the_page(self):
+        html = court.read_text(os.path.join(court.WEB, "index.html"))
+        ids = set(re.findall(r'\bid="([\w-]+)"', html))
+        made_by_script = {"b-replay-copy", "b-intro", "b-intro-new"}
+        for path, src in self.module_sources().items():
+            for found in re.findall(r'\$\("#([\w-]+)"\)', src):
+                self.assertIn(found, ids | made_by_script, "%s looks up #%s" % (path, found))
+
+    def test_plugin_version_matches_the_script(self):
+        with open(os.path.join(SKILL, "..", "..", ".claude-plugin", "plugin.json"), encoding="utf-8") as f:
+            self.assertEqual(json.load(f)["version"], court.VERSION)
+
+    def test_doctor_reports_flags_the_cli_no_longer_lists(self):
+        exe = self.fake_cli([])
+        self.assertEqual(len(court.cli_problems(exe)), len(court.CLI_FLAGS))
+
+    def test_update_replaces_web_and_refuses_what_is_not_the_skill(self):
+        src, dest = os.path.join(self.tmp, "src"), os.path.join(self.tmp, "dest")
+        for folder in (os.path.join(src, "web", "js"), os.path.join(dest, "web")):
+            os.makedirs(folder)
+        for path, text in ((os.path.join(src, "court.py"), "new"), (os.path.join(src, "web", "js", "a.js"), "a"),
+                           (os.path.join(dest, "court.py"), "old"), (os.path.join(dest, "web", "gone.js"), "x")):
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(text)
+        with self.assertRaises(ValueError):
+            court.apply_update(os.path.join(self.tmp, "nope"), dest)
+        self.assertTrue(os.path.exists(os.path.join(dest, "web", "gone.js")))
+        court.apply_update(src, dest)
+        self.assertEqual(court.read_text(os.path.join(dest, "court.py")), "new")
+        self.assertTrue(os.path.exists(os.path.join(dest, "web", "js", "a.js")))
+        self.assertFalse(os.path.exists(os.path.join(dest, "web", "gone.js")))
+
+    def test_versions_compare_as_numbers(self):
+        self.assertGreater(court.version_tuple("1.10.0"), court.version_tuple("1.9.9"))
+
     def test_bundler_refuses_imports_it_cannot_join(self):
         entry = os.path.join(self.tmp, "entry.js")
         with open(entry, "w", encoding="utf-8") as f:
