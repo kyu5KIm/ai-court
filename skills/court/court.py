@@ -700,10 +700,16 @@ def claude_call(claude, model, prompt, cwd, timeout=600, on_text=None, system=No
             err += " (CLI 옵션이 바뀌었을 수 있어요. `court.py doctor`로 확인해 주세요.)"
         raise RuntimeError(err[:300])
     usage = result.get("usage") or {}
-    return {"text": text, "seconds": round(time.time() - t0, 1),
-            "first_text": round(first, 1) if first is not None else None,
-            "input": usage.get("input_tokens", 0), "cache_read": usage.get("cache_read_input_tokens", 0),
-            "cache_write": usage.get("cache_creation_input_tokens", 0), "output": usage.get("output_tokens", 0)}
+    counts = {"input": usage.get("input_tokens", 0), "cache_read": usage.get("cache_read_input_tokens", 0),
+              "cache_write": usage.get("cache_creation_input_tokens", 0), "output": usage.get("output_tokens", 0)}
+    # `usage` leaves out what a web search spends on the side; modelUsage has every model the call touched.
+    models = result.get("modelUsage")
+    if isinstance(models, dict) and models:
+        total = lambda key: sum(m.get(key, 0) for m in models.values() if isinstance(m, dict))
+        counts = {"input": total("inputTokens"), "cache_read": total("cacheReadInputTokens"),
+                  "cache_write": total("cacheCreationInputTokens"), "output": total("outputTokens")}
+    return dict(counts, text=text, seconds=round(time.time() - t0, 1),
+                first_text=round(first, 1) if first is not None else None)
 
 
 def cost_line(c):
@@ -1233,7 +1239,10 @@ def cmd_serve(args):
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
             self.end_headers()
-            self.wfile.write(b)
+            try:
+                self.wfile.write(b)
+            except ConnectionError:
+                pass  # the browser navigated away mid-reply
 
         def send_json(self, code, obj):
             self.send(code, json.dumps(obj, ensure_ascii=False), "application/json; charset=utf-8")

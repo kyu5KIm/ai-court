@@ -634,6 +634,12 @@ class CourtTest(unittest.TestCase):
         self.assertEqual((c["input"], c["cache_read"], c["output"]), (12, 900, 4))
         self.assertIsNotNone(c["first_text"])
 
+    def test_claude_call_counts_what_a_web_search_spends_on_the_side(self):
+        exe = self.fake_cli([{"type": "result", "is_error": False, "result": "ok", "usage": {"input_tokens": 10, "output_tokens": 2},
+                              "modelUsage": {"a": {"inputTokens": 100, "outputTokens": 5}, "b": {"inputTokens": 50, "outputTokens": 1}}}])
+        c = court.claude_call(exe, None, "prompt", self.tmp)
+        self.assertEqual((c["input"], c["output"]), (150, 6))
+
     def test_claude_call_reports_an_error_result(self):
         exe = self.fake_cli([{"type": "result", "is_error": True, "result": "Not logged in · Please run /login"}])
         with self.assertRaises(RuntimeError) as e:
