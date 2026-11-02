@@ -51,6 +51,7 @@
  * @property {string} verdict
  * @property {number} guilty
  * @property {number} not_guilty
+ * @property {number} no_vote
  * @property {string} case
  * @property {string} judge
  * @property {Statement[]} statements

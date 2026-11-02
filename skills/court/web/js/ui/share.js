@@ -134,6 +134,7 @@ export function drawVerdict() {
 
   g.fillStyle = "#74685a";
   g.font = "24px " + SANS;
+  g.fillText(t("caveatImg"), P, H - 100);
   g.fillText("/court skill by Alex Chen (@nocodealex) · github.com/alexyc9381/court-skill", P, H - 60);
   return canvas;
 }

@@ -53,6 +53,27 @@ class CourtTest(unittest.TestCase):
         self.assertIn("VOTE: GUILTY or NOT GUILTY", text)
         self.assertIn(os.path.abspath(os.path.join(state["dir"], "rebuttal", "defense.md")), text)
 
+    def test_each_juror_reads_the_sides_in_its_own_seeded_order(self):
+        state = self.open_trial()
+        orders = [court.statement_order(state, "juror-%02d" % i) for i in range(1, 13)]
+        self.assertEqual(len({tuple(o) for o in orders}), 2)  # both orders turn up among 12 seats
+        self.assertEqual(orders, [court.statement_order(state, "juror-%02d" % i) for i in range(1, 13)])
+        for order in orders:
+            self.assertEqual(order[0].split("/")[1], order[2].split("/")[1])  # same side first in both rounds
+
+    def test_mixed_jury_rotates_models_by_seat(self):
+        state = self.open_trial("--jury", "4")
+        runner = self.run_with(state, lambda p: "VOTE: GUILTY" if "You are JUROR" in p else "1. point",
+                               model="sonnet", jury_model="mixed")
+        self.assertEqual([runner["calls"]["jury/juror-%02d" % i]["model"] for i in range(1, 5)],
+                         ["haiku", "sonnet", "opus", "haiku"])
+        self.assertEqual(runner["calls"]["judge/judge"]["model"], "sonnet")
+
+    def test_judge_is_asked_what_nobody_checked_and_verdict_carries_the_caveat(self):
+        state = self.open_trial("--jury", "3")
+        self.assertIn("## What nobody checked", court.brief_text(state, "judge", court.jobs(state, "judge")[0]))
+        self.assertIn(court.DISCLAIMER, court.render(state))
+
     def test_parse_vote_variants(self):
         v = court.parse_vote("VOTE: NOT GUILTY\nREASON: it pays.\nDECIDING FACT: $8,000\nWOULD FLIP IF: no savings")
         self.assertEqual(v["vote"], "NOT GUILTY")

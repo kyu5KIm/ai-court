@@ -37,6 +37,9 @@ QUICK_JURY = 6
 WAVE = 6
 CREDIT = ("_Made with [/court](https://github.com/alexyc9381/court-skill), a free Claude Code skill by Alex Chen ([@nocodealex](https://instagram.com/nocodealex))._")
 CHARGE = "The case fails as stated: it should not go ahead the way it is described."
+DISCLAIMER = ("_This is not legal, financial or professional advice. The jurors are one family of language models "
+              "playing different roles, not a poll of people, and nothing in the case file was fact-checked unless "
+              "a statement cites a source. Read the verdict as a structured second opinion._")
 
 
 # ---------- state ----------
@@ -112,6 +115,17 @@ def missing(state, phase):
 
 # ---------- briefs ----------
 
+def statement_order(state, job_id):
+    """The four statements in the order this juror reads them.
+
+    Each juror gets its own order of the two sides, fixed by the trial's seed, so the side that always
+    speaks first does not get the same head start with the whole jury.
+    """
+    sides = ["prosecution", "defense"]
+    random.Random("%s/%s" % (state.get("seed"), job_id)).shuffle(sides)
+    return ["%s/%s.md" % (phase, side) for phase in ("opening", "rebuttal") for side in sides]
+
+
 def _abs(state, *parts):
     return os.path.abspath(os.path.join(state["dir"], *parts))
 
@@ -149,8 +163,7 @@ def brief_text(state, phase, job):
     if phase == "jury":
         idx = int(job["id"].split("-")[1]) - 1
         juror = state["jury"][idx]
-        record = "\n".join("    " + _abs(state, p, s + ".md")
-                           for p in ("opening", "rebuttal") for s in ("prosecution", "defense"))
+        record = "\n".join("    " + _abs(state, f) for f in statement_order(state, job["id"]))
         return head + (
             "You are JUROR %d of %d: %s. %s\n\n"
             "Read the case file and all four statements:\n\n%s\n\n"
@@ -173,8 +186,10 @@ def brief_text(state, phase, job):
             "## What the defense got right\nThe 2 strongest points in the case's favour.\n\n"
             "## Conditions for acquittal\nThe 3 specific changes that would flip the most votes, built from "
             "the jurors' WOULD FLIP IF lines. Each one is something the user can do this week.\n\n"
+            "## What nobody checked\nUp to 3 claims the verdict leans on that the record cannot confirm, each "
+            "in one line with how the user could check it. If a statement cites a source, say so.\n\n"
             "## The sentence\nOne short paragraph in a judge's voice: what the user should do next.\n\n"
-            "250 words at most. Do not repeat the vote count: it is printed above your judgment.\n"
+            "300 words at most. Do not repeat the vote count: it is printed above your judgment.\n"
             % (_abs(state, "opening"), _abs(state, "rebuttal"), _abs(state, "jury"),
                _abs(state, "tally.json")))
     raise ValueError(phase)
@@ -247,7 +262,7 @@ def render(state):
         lines.append("| %s | %s | %s |" % (r["juror"], r["vote"], r["reason"].replace("|", "/")))
     lines += ["", judgment, "",
               "_The full trial is in %s: the opening statements, the rebuttals and every juror's vote._"
-              % os.path.abspath(state["dir"]), "", CREDIT]
+              % os.path.abspath(state["dir"]), "", DISCLAIMER, "", CREDIT]
     text = "\n".join(lines) + "\n"
     with open(os.path.join(state["dir"], "VERDICT.md"), "w", encoding="utf-8") as f:
         f.write(text)
@@ -654,13 +669,12 @@ def open_trial(case, n, seed=None):
 def record_files(state, phase, job):
     """The files a job's brief tells it to read, in the order the brief names them."""
     files = ["case.md"]
-    statements = ["opening/prosecution.md", "opening/defense.md", "rebuttal/prosecution.md", "rebuttal/defense.md"]
     if phase == "rebuttal":
         files.append("opening/%s.md" % ("defense" if job["id"] == "prosecution" else "prosecution"))
     elif phase == "jury":
-        files += statements
+        files += statement_order(state, job["id"])
     elif phase == "judge":
-        files += statements + ["jury/%s.md" % j["id"] for j in jobs(state, "jury")] + ["tally.json"]
+        files += statement_order(state, job["id"]) + ["jury/%s.md" % j["id"] for j in jobs(state, "jury")] + ["tally.json"]
     return [os.path.join(state["dir"], f) for f in files]
 
 
@@ -681,8 +695,17 @@ def set_runner(state, status, message="", phase=None, calls=None, seconds=None):
                 "seconds": seconds, "calls": calls or {}})
 
 
-# Models the page may pick for the jury: the CLI's aliases, or "" for the same model as everyone else.
-JURY_MODELS = ("", "haiku", "sonnet", "opus")
+# Models the page may pick for the jury: the CLI's aliases, "" for the same model as everyone else, or
+# "mixed" to seat different models side by side, so their blind spots are less alike.
+JURY_MODELS = ("", "haiku", "sonnet", "opus", "mixed")
+MIXED_JURY = ("haiku", "sonnet", "opus")
+
+
+def juror_model(jury_model, job_id):
+    """The model one juror runs on. "mixed" rotates through MIXED_JURY by seat."""
+    if jury_model == "mixed":
+        return MIXED_JURY[(int(job_id.split("-")[1]) - 1) % len(MIXED_JURY)]
+    return jury_model
 
 
 def run_trial(state, claude, model=None, log=print, jury_model=None, parallel=WAVE):
@@ -690,7 +713,8 @@ def run_trial(state, claude, model=None, log=print, jury_model=None, parallel=WA
 
     Same phases, briefs and retry rules as SKILL.md: each phase's missing jobs run in parallel, missing
     ones are retried once, a juror that fails twice gets NO VOTE, anything else that fails twice stops
-    the trial. `jury_model` runs the jurors on a different (usually faster) model than the other roles.
+    the trial. `jury_model` runs the jurors on a different (usually faster) model than the other roles, or on
+    several models side by side ("mixed").
     `parallel` caps how many calls of one phase run at once (1 to 12); more is faster for a big jury but
     more likely to hit the plan's rate limit.
     """
@@ -701,7 +725,7 @@ def run_trial(state, claude, model=None, log=print, jury_model=None, parallel=WA
 
     def run_job(phase, job):
         try:
-            use = (jury_model or model) if phase == "jury" else model
+            use = (juror_model(jury_model, job["id"]) or model) if phase == "jury" else model
             draft = draft_path(job)
             c = claude_call(claude, use, headless_prompt(state, phase, job), state["dir"], system=TRIAL_SYSTEM,
                             on_text=throttled(lambda text: write_draft(draft, text)))
@@ -925,7 +949,7 @@ def cmd_serve(args):
                 return self.send_json(400, {"error": "배심원은 3명에서 12명 사이예요"})
             jury_model = str(body.get("jury_model") or "").strip() or args.jury_model or ""
             if jury_model not in JURY_MODELS and jury_model != args.jury_model:
-                return self.send_json(400, {"error": "배심원 모델은 haiku, sonnet, opus 중에서 골라 주세요"})
+                return self.send_json(400, {"error": "배심원 모델은 haiku, sonnet, opus, mixed 중에서 골라 주세요"})
             if not cfg["login"]:
                 return self.send_json(503, {"error": NOT_LOGGED_IN})
             with QLOCK:
@@ -1057,13 +1081,13 @@ def main(argv=None):
         sub.add_parser(name)
     pr = sub.add_parser("run")
     pr.add_argument("--model", help="model for every role (default: claude's default)")
-    pr.add_argument("--jury-model", help="model for the jurors only, e.g. haiku (default: same as --model)")
+    pr.add_argument("--jury-model", help="model for the jurors only: haiku, sonnet, opus, or mixed for one of each by seat (default: same as --model)")
     pr.add_argument("--parallel", type=int, default=WAVE, help="calls run at once per phase, 1-12 (default 6)")
     ps = sub.add_parser("serve")
     ps.add_argument("--port", type=int, default=8765)
     ps.add_argument("--run", help="trial folder to serve (default: the latest, followed as new trials open)")
     ps.add_argument("--model", help="model for page-filed trials and questions (default: claude's default)")
-    ps.add_argument("--jury-model", help="default jury model for page-filed trials, e.g. haiku")
+    ps.add_argument("--jury-model", help="default jury model for page-filed trials: haiku, sonnet, opus or mixed")
     ps.add_argument("--parallel", type=int, default=WAVE, help="calls run at once per phase, 1-12 (default 6)")
     args = p.parse_args(argv)
     if not args.cmd:

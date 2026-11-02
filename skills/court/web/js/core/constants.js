@@ -7,7 +7,7 @@ export const JUROR_KO = {
   "The First-Time Customer": ["처음 온 고객", "오늘 처음 들었는데, 이번 주에 이 가격에 정말 쓸지 봐요."],
   "The Competitor": ["경쟁자", "내일 이걸 본다면 따라 할지, 이길지, 무시할지 봐요."],
   "The Retired Judge": ["은퇴한 판사", "증거가 기록에 실제로 있는지, 바람을 사실처럼 쓴 건지 봐요."],
-  "The Teenager": ["십대", "솔직하고 쉽게 질려요. 누가 관심이나 가질지 봐요."],
+  "The Teenager": ["십대", "솔직하고 쉽게 질려요. 누가 왜 계속 관심을 가질지 기록에서 찾지 못하면 안건에 불리하게 봐요."],
   "The Engineer": ["엔지니어", "실제로 만들 수 있는지, 커지면 무엇이 먼저 깨지는지 봐요."],
   "The Small-Business Owner": ["동네 가게 사장님", "월요일 아침에 누가 일하고, 돈이 들어오기 전 현금은 어디서 나오는지 봐요."],
   "The Statistician": ["통계학자", "이런 계획이 실제로 성공하는 비율과 표본 크기를 봐요."],
@@ -37,6 +37,7 @@ export const SECTION_KO = {
   "charges that stuck": "인정된 혐의",
   "what the defense got right": "변호인이 맞힌 점",
   "conditions for acquittal": "무죄 조건",
+  "what nobody checked": "아무도 확인하지 않은 것",
   "the sentence": "선고",
 };
 

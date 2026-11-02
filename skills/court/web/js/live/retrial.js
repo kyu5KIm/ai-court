@@ -24,6 +24,12 @@ export function retrialCase() {
   return lines.join("\n");
 }
 
+/** The same case word for word, same jury: comparing the two shows how much the answers vary. */
+function openSameCase() {
+  const d = app.data;
+  openNewCase({ case: String(d.case || "").trim(), jury: d.jurors.length, seed: d.seed == null ? "" : String(d.seed) });
+}
+
 export function openRetrial() {
   const d = app.data;
   openNewCase({ case: retrialCase(), jury: d.jurors.length, seed: d.seed == null ? "" : String(d.seed) });
@@ -40,6 +46,8 @@ export function setupRetrial() {
   $("#log").addEventListener("click", (e) => {
     const b = e.target instanceof Element ? e.target.closest('[data-action="retrial"]') : null;
     if (b) openRetrial();
+    const same = e.target instanceof Element ? e.target.closest('[data-action="same-case"]') : null;
+    if (same) openSameCase();
   });
   updateRetrialButton();
 }

@@ -18,6 +18,11 @@ function firstLine(d) {
   return (String(d.case || "").split("\n").map((l) => l.replace(/^#+\s*/, "").trim()).filter(Boolean)[0] || "").slice(0, 80);
 }
 
+/** @param {import("../types.js").CourtData} a @param {import("../types.js").CourtData} b */
+function sameCase(a, b) {
+  return String(a.case || "").trim() === String(b.case || "").trim();
+}
+
 /** @param {import("../types.js").JurorRecord | undefined} j */
 function voteCell(j) {
   if (!j) return '<td class="muted">—</td>';
@@ -54,6 +59,7 @@ export async function openCompare(runA, runB) {
         "</span></div>").join("") + "</div>" +
       '<p class="cmp-sum">' + (changed ? t("cmpChanged", changed) : t("cmpNone")) +
       (sameJury ? "" : t("cmpDiffJury")) + "</p>" +
+      '<p class="cmp-sum">' + (sameCase(a, b) ? t("cmpSameCase") : t("cmpDiffCase")) + "</p>" +
       '<div class="cmp-scroll"><table class="cmp-table"><tr><th>' + t("thJuror") + '</th><th>' + t("thBefore") +
       '</th><th>' + t("thAfter") + "</th><th></th></tr>" +
       rows + "</table></div>";
