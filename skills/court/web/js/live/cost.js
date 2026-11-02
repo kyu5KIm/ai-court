@@ -42,7 +42,15 @@ export function renderCost() {
   const key = JSON.stringify([keys.length, d.runner && d.runner.seconds, asked.length]);
   if (key === costView.key) return;
   costView.key = key;
-  if (!keys.length && !asked.length) { panel.hidden = true; return; }
+  if (!keys.length && !asked.length) {
+    // A trial run by a chat session's sub-agents leaves no per-call figures, only the time its files took.
+    panel.hidden = !d.timing;
+    if (d.timing) {
+      $("#cost-summary").textContent = t("costTitle") + " · " + t("costTrial", duration(d.timing.seconds));
+      $("#cost-table").innerHTML = '<tr><td class="muted">' + t("costSession") + "</td></tr>";
+    }
+    return;
+  }
 
   const all = keys.map((k) => calls[k]).concat(asked.map((q) => q.cost));
   const totalIn = all.reduce((s, c) => s + inputOf(c), 0);

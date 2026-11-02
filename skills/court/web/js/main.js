@@ -27,11 +27,13 @@ import { setupTrials } from "./live/trials.js";
 import { setupCompare } from "./live/compare.js";
 import { setupRetrial } from "./live/retrial.js";
 import { setupRunControl } from "./live/runControl.js";
+import { withTranslation, setupTranslate } from "./live/translate.js";
+import { setupReplay } from "./live/replay.js";
 import { applyI18n } from "./core/i18n.js";
 import { setupLang } from "./ui/lang.js";
 
 function boot() {
-  app.data = JSON.parse($("#court-data").textContent);
+  app.data = withTranslation(JSON.parse($("#court-data").textContent));
   app.token = app.data.token || "";
   app.run = new URLSearchParams(location.search).get("run") || "";
 
@@ -60,6 +62,8 @@ function boot() {
   setupCompare();
   setupRetrial();
   setupRunControl();
+  setupTranslate();
+  setupReplay();
   liveBadge();
   waitingFx();
   watchLayout();

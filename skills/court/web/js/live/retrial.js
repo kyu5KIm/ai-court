@@ -7,6 +7,11 @@ import { openNewCase } from "./newCase.js";
 import { viewedRun } from "./trials.js";
 import { t, runDate } from "../core/i18n.js";
 
+/** The case and judgment as written, even when a translation is on screen. */
+function originals() {
+  return app.data.source || app.data;
+}
+
 /** A retrial needs a judgment to answer, and a server that can open trials. */
 function canRetry() {
   const d = app.data;
@@ -15,9 +20,8 @@ function canRetry() {
 
 /** The case text for the retrial: the original, the conditions, and a place to say what was done. */
 export function retrialCase() {
-  const d = app.data;
-  const conditions = acquittalConditions();
-  const lines = [String(d.case || "").trim(), "", t("retrialHead", runDate(viewedRun()))];
+  const conditions = acquittalConditions(originals().judge);
+  const lines = [String(originals().case || "").trim(), "", t("retrialHead", runDate(viewedRun()))];
   conditions.forEach((c, i) => lines.push((i + 1) + ". " + c));
   if (!conditions.length) lines.push(t("retrialNone"));
   lines.push("", t("retrialDone"), "- ");
@@ -27,7 +31,7 @@ export function retrialCase() {
 /** The same case word for word, same jury: comparing the two shows how much the answers vary. */
 function openSameCase() {
   const d = app.data;
-  openNewCase({ case: String(d.case || "").trim(), jury: d.jurors.length, seed: d.seed == null ? "" : String(d.seed) });
+  openNewCase({ case: String(originals().case || "").trim(), jury: d.jurors.length, seed: d.seed == null ? "" : String(d.seed) });
 }
 
 export function openRetrial() {

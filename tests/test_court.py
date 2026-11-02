@@ -18,12 +18,18 @@ class CourtTest(unittest.TestCase):
         self.old = os.getcwd()
         self.tmp = tempfile.mkdtemp()
         os.chdir(self.tmp)
+        self.old_home = os.environ.get("COURT_HOME")
+        os.environ["COURT_HOME"] = os.path.join(self.tmp, "home")  # never the real ~/.court
         os.makedirs(".court")
         with open(".court/case.md", "w") as f:
             f.write("Quit my job to sell candles on Etsy full time\n\nI have $8,000 saved.\n")
 
     def tearDown(self):
         os.chdir(self.old)
+        if self.old_home is None:
+            del os.environ["COURT_HOME"]
+        else:
+            os.environ["COURT_HOME"] = self.old_home
         # On Windows a killed child can hold its working folder for a moment longer.
         for _ in range(20):
             shutil.rmtree(self.tmp, ignore_errors=True)
@@ -37,7 +43,7 @@ class CourtTest(unittest.TestCase):
 
     def write_all(self, state, phase, text):
         for j in court.jobs(state, phase):
-            with open(j["output"], "w") as f:
+            with open(j["output"], "w", encoding="utf-8") as f:
                 f.write(text)
 
     def test_jurors_are_distinct(self):
@@ -410,6 +416,84 @@ class CourtTest(unittest.TestCase):
         self.assertEqual((trials[1]["verdict"], trials[1]["not_guilty"]), ("NOT GUILTY", 3))
         self.assertIsNone(trials[0]["verdict"])  # nobody has voted yet
         self.assertIn("Quit my job", trials[0]["case"])
+
+    def test_trials_in_other_folders_are_listed_and_found(self):
+        here = self.open_trial("--jury", "3")
+        os.makedirs("elsewhere")
+        os.chdir("elsewhere")
+        there = self.open_trial_in_place()
+        os.chdir("..")
+        trials = court.all_trials(".")
+        self.assertEqual(len(trials), 2)
+        by_run = {tr["run"]: tr for tr in trials}
+        name = os.path.basename(there["dir"])
+        self.assertFalse(by_run[name]["here"])
+        self.assertFalse(by_run[name]["latest"])
+        self.assertTrue(by_run[os.path.basename(here["dir"])]["here"])
+        self.assertTrue(os.path.isfile(os.path.join(court.find_run(".", name), "state.json")))
+        for bad in ("..", "../x", "a/b", "nope"):
+            self.assertIsNone(court.find_run(".", bad), bad)
+
+    def open_trial_in_place(self):
+        time.sleep(1.1)  # run names have one-second resolution
+        os.makedirs(".court")
+        return court.open_trial("Open a second shop across town next spring", 3, 7)
+
+    def test_a_session_run_trial_reports_its_time_from_the_files(self):
+        state = self.open_trial("--jury", "3")
+        self.assertIsNone(court.trial_data(state)["timing"])
+        self.write_all(state, "opening", "1. point")
+        self.assertGreaterEqual(court.trial_data(state)["timing"]["seconds"], 0)
+
+    def test_replay_page_carries_the_command_that_opens_it_live(self):
+        state = self.open_trial("--jury", "3")
+        data = court.trial_data(state)
+        self.assertIn("serve --run", data["serve_command"])
+        self.assertIn(os.path.abspath(state["dir"]), data["serve_command"])
+
+    def finished_trial(self):
+        state = self.open_trial("--jury", "3")
+        self.write_all(state, "opening", "1. 요점")
+        self.write_all(state, "rebuttal", "1. 답")
+        self.write_all(state, "jury", "VOTE: GUILTY\nREASON: 얇다\nDECIDING FACT: 저축\nWOULD FLIP IF: 더 팔면\n")
+        self.write_all(state, "judge", "## 선고\n기다려")
+        return state
+
+    def translate_with(self, state, reply):
+        def fake(claude, model, prompt, cwd, timeout=600, on_text=None, system=None, tools="", cancel=None):
+            self.assertEqual((model, tools, system), (court.TRANSLATE_MODEL, "", court.TRANSLATE_SYSTEM))
+            return {"text": reply(prompt), "seconds": 0.1, "first_text": 0.1, "input": 5, "cache_read": 0,
+                    "cache_write": 0, "output": 5}
+        real, court.claude_call = court.claude_call, fake
+        try:
+            court.translate_trial(state, "en", "claude")
+        finally:
+            court.claude_call = real
+        return court.trial_data(state)["translations"]["en"]
+
+    def test_translation_keeps_every_piece_and_the_original(self):
+        state = self.finished_trial()
+        jurors = json.dumps([{"reason": "thin", "fact": "savings", "flip": "sell more"}] * 3)
+        tr = self.translate_with(state, lambda p: "noise " + jurors if "JSON array" in p else "EN:" + p[-5:])
+        self.assertEqual(tr["status"], "done")
+        self.assertEqual(sorted(tr["docs"]), sorted(["case", "judge", "jurors", "opening/prosecution", "opening/defense",
+                                                     "rebuttal/prosecution", "rebuttal/defense"]))
+        self.assertEqual(tr["docs"]["jurors"][0]["reason"], "thin")
+        self.assertEqual(len(tr["costs"]), 7)
+        self.assertIn("1. 요점", court.trial_data(state)["statements"][0]["text"])
+
+    def test_translation_of_votes_that_comes_back_misshapen_is_dropped(self):
+        state = self.finished_trial()
+        tr = self.translate_with(state, lambda p: "not json" if "JSON array" in p else "EN")
+        self.assertEqual(tr["status"], "done")
+        self.assertNotIn("jurors", tr["docs"])
+
+    def test_answer_language_follows_the_question(self):
+        state = self.open_trial("--jury", "3")
+        en = court.new_question(state, "judge", "why?", "en")
+        self.assertIn("영어(English)로", court.ask_prompt(state, en))
+        ko = court.new_question(state, "judge", "왜?")
+        self.assertIn("한국어로", court.ask_prompt(state, ko))
 
     def test_run_names_from_the_page_cannot_leave_the_court_folder(self):
         state = self.open_trial("--jury", "3")

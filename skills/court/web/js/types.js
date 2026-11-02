@@ -68,6 +68,11 @@
  * @property {boolean} [login]   the claude CLI is logged in
  * @property {string} [token]    sent back with every POST
  * @property {number} [ahead]    trials ahead of this one in the server's line
+ * @property {string} [run]      the trial's folder name
+ * @property {{seconds: number} | null} [timing]  time taken, from the files, for a trial with no runner.json
+ * @property {Record<string, any>} [translations]  by language: status, message, docs
+ * @property {string} [serve_command]  the command that opens this trial live
+ * @property {{case: string, judge: string}} [source]  the original text, when a translation is on screen
  */
 
 /** @typedef {{x: number, y: number}} Pos */

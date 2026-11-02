@@ -13,13 +13,14 @@ import { renderCost } from "./cost.js";
 import { updateShareButton } from "../ui/share.js";
 import { updateRetrialButton } from "./retrial.js";
 import { updateRunButtons } from "./runControl.js";
+import { withTranslation, updateTranslateButton } from "./translate.js";
 
 async function pollOnce() {
   try {
     const next = await fetchState();
     if (next.dir !== app.data.dir) { location.reload(); return; }  // a new trial opened
     app.online = true;
-    app.data = next;
+    app.data = withTranslation(next);
     mergeScenes();
     syncQuestions();
     renderChips();
@@ -27,6 +28,7 @@ async function pollOnce() {
     updateShareButton();
     updateRetrialButton();
     updateRunButtons();
+    updateTranslateButton();
     waitingFx();
     liveBadge();
     updateDraft();
