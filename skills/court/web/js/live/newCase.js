@@ -35,14 +35,16 @@ function roughTokens(n) {
 }
 
 /**
- * A rough figure for the whole trial, from the case length and the brief's word limits: statements run about
- * 600 and 450 tokens, a juror's lines about 100, and the judgment about 500. Calibrated on measured trials.
+ * A rough figure for the whole trial, from a measured 3-juror trial: the four statements come to about 4,400
+ * tokens of text every later call reads. Output counts the model's thinking too, which swings widely by model,
+ * and one web search costs about 7,000 tokens of input on the side.
  */
 function updateEstimate() {
   const c = Math.round($("#nc-case").value.length / 2.5), n = Number($("#nc-jury").value) || 6;
-  const statements = 2 * 600 + 2 * 450;
-  const input = 2 * (450 + c) + 2 * (500 + c + 600) + n * (550 + c + statements) + (650 + c + statements + n * 110);
-  const output = statements + n * 100 + 500;
+  const statements = 4400;
+  const research = $("#nc-research").checked ? 2 * 7000 : 0;
+  const input = 2 * (450 + c) + 2 * (500 + c + 1200) + n * (550 + c + statements) + (650 + c + statements + n * 110) + research;
+  const output = 2 * 2400 + 2 * 2500 + n * 1500 + 5000;
   $("#nc-estimate").textContent = t("ncEstimate", roughTokens(input), roughTokens(output));
 }
 
@@ -60,6 +62,7 @@ export function setupNewCase() {
   $("#nc-cancel").addEventListener("click", closeNewCase);
   $("#nc-case").addEventListener("input", updateEstimate);
   $("#nc-jury").addEventListener("change", updateEstimate);
+  $("#nc-research").addEventListener("change", updateEstimate);
   $("#nc-form").addEventListener("submit", async (/** @type {Event} */ e) => {
     e.preventDefault();
     const go = $("#nc-go"), err = $("#nc-err");

@@ -851,7 +851,7 @@ def headless_prompt(state, phase, job):
     tools = "Your only tool is web search." if job_tools(state, phase) else "This run has no tools."
     text += ("\n---\n%s Every file the brief names is pasted below (tally.json carries every juror's vote and "
              "lines). Reply with exactly the text that belongs in your output file and nothing else: it is saved "
-             "to that file for you.\n" % tools)
+             "to that file for you. Do not start with a title or the file's name.\n" % tools)
     for path in record_files(state, phase, job):
         body = read_text(path).strip() if os.path.exists(path) else "(missing)"
         if path.endswith(".json") and body != "(missing)":

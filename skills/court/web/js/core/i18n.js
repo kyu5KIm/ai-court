@@ -262,7 +262,7 @@ const STR = {
   ncSeedPlaceholder: ["비워 두면 무작위", "Random if empty"],
   ncResearch: ["검사와 변호인이 웹 검색으로 사실을 찾아 출처와 함께 제시 (호출당 시간과 사용량이 늘어요)",
     "Let the prosecutor and the defense search the web and cite sources (each call takes longer and uses more)"],
-  ncEstimate: ["예상 사용량: 입력 약 {0} · 출력 약 {1} 토큰 (어림값, 실제는 답 길이에 따라 달라요)", "Estimated use: about {0} tokens in · {1} out (a rough figure; it depends on how long the answers run)"],
+  ncEstimate: ["예상 사용량: 입력 약 {0} · 출력 약 {1} 토큰 (어림값, 출력은 모델의 생각 분량에 따라 크게 달라요)", "Estimated use: about {0} tokens in · {1} out (a rough figure; output swings widely with how much the model thinks)"],
   ncGo: ["재판 열기", "Open the trial"],
 };
 
