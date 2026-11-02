@@ -1493,17 +1493,28 @@ def cmd_update(args):
     import tempfile
     import urllib.request
 
+    def fetch(url, accept="*/*"):
+        req = urllib.request.Request(url, headers={"Accept": accept, "User-Agent": "court-skill"})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return r.read().decode("utf-8")
+
     if args.upstream:
-        with urllib.request.urlopen("https://api.github.com/repos/%s/commits/main" % UPSTREAM, timeout=30) as r:
-            sha = json.load(r)["sha"]
+        try:
+            sha = fetch("https://api.github.com/repos/%s/commits/main" % UPSTREAM, "application/vnd.github.sha").strip()
+        except OSError as e:
+            print("court: could not reach GitHub: %s" % e)
+            return 1
         if sha.startswith(UPSTREAM_SEEN):
             print("court: the original (%s) has nothing new since %s" % (UPSTREAM, UPSTREAM_SEEN))
         else:
             print("court: the original has new commits: https://github.com/%s/compare/%s...%s" % (
                 UPSTREAM, UPSTREAM_SEEN, sha[:10]))
         return 0
-    with urllib.request.urlopen(RAW_COURT, timeout=30) as r:
-        found = re.search(r'^VERSION = "([^"]+)"', r.read().decode("utf-8"), re.M)
+    try:
+        found = re.search(r'^VERSION = "([^"]+)"', fetch(RAW_COURT), re.M)
+    except OSError as e:
+        print("court: could not reach GitHub: %s" % e)
+        return 1
     latest = found.group(1) if found else "0"
     print("court: installed %s, latest %s" % (VERSION, latest))
     if version_tuple(latest) <= version_tuple(VERSION):
