@@ -38,7 +38,7 @@
 
 /**
  * @typedef {object} Runner
- * @property {"running" | "done" | "error"} status
+ * @property {"queued" | "running" | "done" | "error" | "cancelled" | "interrupted"} status
  * @property {string} message
  * @property {number | null} [seconds]  time since the trial started
  * @property {Record<string, any>} [calls]  per call: seconds, first_text, input, cache_read, cache_write, output, model
@@ -67,6 +67,7 @@
  * @property {boolean} [ask]     the claude CLI was found
  * @property {boolean} [login]   the claude CLI is logged in
  * @property {string} [token]    sent back with every POST
+ * @property {number} [ahead]    trials ahead of this one in the server's line
  */
 
 /** @typedef {{x: number, y: number}} Pos */

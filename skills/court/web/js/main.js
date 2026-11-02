@@ -26,6 +26,7 @@ import { setupShare } from "./ui/share.js";
 import { setupTrials } from "./live/trials.js";
 import { setupCompare } from "./live/compare.js";
 import { setupRetrial } from "./live/retrial.js";
+import { setupRunControl } from "./live/runControl.js";
 import { applyI18n } from "./core/i18n.js";
 import { setupLang } from "./ui/lang.js";
 
@@ -58,13 +59,14 @@ function boot() {
   setupTrials();
   setupCompare();
   setupRetrial();
+  setupRunControl();
   liveBadge();
   waitingFx();
   watchLayout();
 
   // Opened right after filing a case: play the new trial as it arrives.
   if (/[?&]play=1/.test(location.search)) {
-    try { history.replaceState(null, "", location.pathname); } catch (e) { /* file:// pages can't */ }
+    try { history.replaceState(null, "", location.pathname + (app.run ? "?run=" + encodeURIComponent(app.run) : "")); } catch (e) { /* file:// pages can't */ }
     if (!app.data.empty) setPlaying(true);
   }
   startPolling();

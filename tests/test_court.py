@@ -4,6 +4,7 @@ import re
 import shutil
 import sys
 import tempfile
+import time
 import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -23,7 +24,12 @@ class CourtTest(unittest.TestCase):
 
     def tearDown(self):
         os.chdir(self.old)
-        shutil.rmtree(self.tmp)
+        # On Windows a killed child can hold its working folder for a moment longer.
+        for _ in range(20):
+            shutil.rmtree(self.tmp, ignore_errors=True)
+            if not os.path.exists(self.tmp):
+                break
+            time.sleep(0.25)
 
     def open_trial(self, *extra):
         court.main(["init", "--case-file", ".court/case.md", "--seed", "7"] + list(extra))
@@ -184,8 +190,9 @@ class CourtTest(unittest.TestCase):
 
     def run_with(self, state, answer, **kw):
         """run_trial with claude_call replaced by `answer(prompt) -> text` (or an exception)."""
-        def fake(claude, model, prompt, cwd, timeout=600, on_text=None, system=None):
+        def fake(claude, model, prompt, cwd, timeout=600, on_text=None, system=None, tools="", cancel=None):
             self.systems.append(system)
+            self.tools.append(tools)
             self.models.append(("JUROR" in prompt, model))
             text = answer(prompt)
             if on_text:
@@ -193,7 +200,7 @@ class CourtTest(unittest.TestCase):
                 on_text(text)
             return {"text": text, "seconds": 0.2, "first_text": 0.1, "input": 50, "cache_read": 0,
                     "cache_write": 0, "output": 7}
-        self.systems, self.models = [], []
+        self.systems, self.models, self.tools = [], [], []
         real, court.claude_call = court.claude_call, fake
         try:
             court.run_trial(state, "claude", log=lambda m: None, **kw)
@@ -281,6 +288,115 @@ class CourtTest(unittest.TestCase):
         left = [f for d, _, fs in os.walk(state["dir"]) for f in fs if f.endswith((".draft", ".tmp"))]
         self.assertEqual(left, [])
 
+    @staticmethod
+    def juror_or_point(prompt):
+        if "You are JUROR" in prompt:
+            return "VOTE: GUILTY\nREASON: thin"
+        return "## The sentence\nWait." if "You are the JUDGE" in prompt else "1. point"
+
+    def test_a_stopped_trial_resumes_with_only_what_is_missing(self):
+        state = self.open_trial("--jury", "3")
+
+        def down_at_jury(prompt):
+            if "You are JUROR" in prompt:
+                raise RuntimeError("down")
+            return self.juror_or_point(prompt)
+
+        first = self.run_with(state, down_at_jury)
+        self.assertEqual(first["status"], "done")  # jurors that fail twice are NO VOTE, as before
+        state = self.open_trial("--jury", "3")
+
+        def judge_down(prompt):
+            if "You are the JUDGE" in prompt:
+                raise RuntimeError("down")
+            return self.juror_or_point(prompt)
+
+        self.assertEqual(self.run_with(state, judge_down)["status"], "error")
+        calls = []
+        again = self.run_with(state, lambda p: calls.append(p) or self.juror_or_point(p))
+        self.assertEqual(again["status"], "done")
+        self.assertEqual(len(calls), 1)  # only the judge
+        self.assertIn("opening/prosecution", again["calls"])  # earlier calls stay on the bill
+        self.assertTrue(os.path.exists(os.path.join(state["dir"], "VERDICT.md")))
+
+    def test_rate_limit_waits_then_stops_without_costing_a_vote(self):
+        state = self.open_trial("--jury", "3")
+        seen = []
+
+        def limited(prompt):
+            if "You are JUROR" in prompt:
+                seen.append(1)
+                raise court.RateLimited("You've hit your limit")
+            return self.juror_or_point(prompt)
+
+        waits, court.RATE_WAITS = court.RATE_WAITS, (0, 0)
+        try:
+            runner = self.run_with(state, limited)
+        finally:
+            court.RATE_WAITS = waits
+        self.assertEqual(runner["status"], "error")
+        self.assertIn("한도", runner["message"])
+        self.assertEqual(len(seen), 3 * 3)  # three jurors, each tried three times, and no second round
+        self.assertEqual(court.count_votes(state)["no_vote"], 3)
+        self.assertTrue(all(not court.done(j) for j in court.jobs(state, "jury")))  # no NO VOTE written
+
+    def test_a_reply_without_a_vote_is_tried_again(self):
+        state = self.open_trial("--jury", "3")
+        replies = {}
+
+        def answer(prompt):
+            if "You are JUROR" in prompt:
+                replies[prompt] = replies.get(prompt, 0) + 1
+                return "I think it fails." if replies[prompt] == 1 else "VOTE: GUILTY\nREASON: thin"
+            return self.juror_or_point(prompt)
+
+        self.run_with(state, answer)
+        self.assertEqual(court.count_votes(state)["guilty"], 3)
+
+    def test_cancel_stops_before_any_no_vote_is_written(self):
+        state = self.open_trial("--jury", "3")
+
+        def answer(prompt):
+            if "You are JUROR" in prompt:
+                court.write_text(court.cancel_path(state), "")
+                time.sleep(1.5)  # the heartbeat notices within a second
+                raise RuntimeError("killed")
+            return self.juror_or_point(prompt)
+
+        runner = self.run_with(state, answer)
+        self.assertEqual(runner["status"], "cancelled")
+        self.assertTrue(all(not court.done(j) for j in court.jobs(state, "jury")))
+
+    def test_a_run_whose_heartbeat_stopped_reads_as_interrupted(self):
+        state = self.open_trial("--jury", "3")
+        court.set_runner(state, "running", "", "opening", {}, 1.0)
+        self.assertEqual(court.trial_data(state)["runner"]["status"], "interrupted")
+        court.touch_alive(state)
+        self.assertEqual(court.trial_data(state)["runner"]["status"], "running")
+        old = time.time() - court.ALIVE_STALE - 5
+        os.utime(court.alive_path(state), (old, old))
+        self.assertEqual(court.trial_data(state)["runner"]["status"], "interrupted")
+
+    def test_research_gives_only_the_openings_web_search(self):
+        with open(".court/case.md", "w", encoding="utf-8") as f:
+            f.write("Quit my job to sell candles on Etsy full time\n")
+        state = court.open_trial("Quit my job to sell candles on Etsy full time", 3, 7, research=True)
+        prompts = []
+        self.run_with(state, lambda p: prompts.append(p) or self.juror_or_point(p))
+        self.assertEqual(sorted(self.tools), [""] * 6 + ["WebSearch"] * 2)
+        self.assertEqual(sum("source URL" in p for p in prompts), 2)
+
+    def test_prompts_drop_long_paths_and_the_judge_gets_each_vote_once(self):
+        state = self.open_trial("--jury", "3")
+        self.write_all(state, "opening", "1. point")
+        self.write_all(state, "rebuttal", "1. answer")
+        for j in court.jobs(state, "jury"):
+            court.write_text(j["output"], "VOTE: GUILTY\nREASON: unique-reason\n")
+        court.tally(state)
+        prompt = court.headless_prompt(state, "judge", court.jobs(state, "judge")[0])
+        self.assertNotIn(os.path.abspath(state["dir"]), prompt)
+        self.assertEqual(prompt.count("unique-reason"), 3)
+
     def test_past_trials_are_listed_newest_first(self):
         first = self.open_trial("--jury", "3")
         for j in court.jobs(first, "jury"):
@@ -302,13 +418,33 @@ class CourtTest(unittest.TestCase):
         for bad in ("", "..", "../x", "a/b", "a\\b", "LATEST", "nope"):
             self.assertIsNone(court.run_path(".", bad), bad)
 
-    def fake_cli(self, lines):
+    def test_claude_call_sorts_out_limits_and_cancel(self):
+        exe = self.fake_cli([{"type": "result", "is_error": True, "result": "You've hit your limit · resets 3pm"}])
+        with self.assertRaises(court.RateLimited):
+            court.claude_call(exe, None, "prompt", self.tmp)
+        exe = self.fake_cli([{"type": "system"}])
+        with self.assertRaises(RuntimeError) as e:
+            court.claude_call(exe, None, "prompt", self.tmp)
+        self.assertIn("doctor", str(e.exception))
+
+    def test_claude_call_cancel_kills_the_call(self):
+        import threading
+        exe = self.fake_cli([{"type": "system"}], wait=20)
+        cancel = threading.Event()
+        threading.Timer(0.5, cancel.set).start()
+        t0 = time.time()
+        with self.assertRaises(court.Cancelled):
+            court.claude_call(exe, None, "prompt", self.tmp, cancel=cancel)
+        self.assertLess(time.time() - t0, 10)
+
+    def fake_cli(self, lines, wait=0):
         """An executable that prints `lines` (stream-json events) the way `claude -p` does."""
         script = os.path.join(self.tmp, "fake_claude.py")
         with open(script, "w", encoding="utf-8") as f:
-            f.write("import sys\nsys.stdin.read()\n")
+            f.write("import sys, time\nsys.stdin.read()\n")
             for line in lines:
                 f.write("print(%r, flush=True)\n" % json.dumps(line))
+            f.write("time.sleep(%d)\n" % wait)
         if os.name == "nt":
             exe = os.path.join(self.tmp, "fake_claude.cmd")
             with open(exe, "w") as f:

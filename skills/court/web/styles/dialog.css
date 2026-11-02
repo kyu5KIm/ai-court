@@ -58,3 +58,6 @@ dialog.sheet.wide{width:min(720px,calc(100vw - 32px))}
 .keys tr:last-child td{border-bottom:0}
 kbd{font-family:Consolas,ui-monospace,monospace;font-size:12px;padding:2px 7px;border:1px solid var(--line);border-bottom-width:2px;
   border-radius:6px;background:var(--panel-2)}
+.nc-check{display:flex;gap:8px;align-items:flex-start;font-size:13px;margin:10px 0 0}
+.nc-check input{margin-top:3px;flex:none}
+.nc-estimate{font-size:12px;color:var(--muted);margin:8px 0 0}
