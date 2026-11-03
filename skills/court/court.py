@@ -440,7 +440,10 @@ def bundle_js(entry):
         src = EXPORT_RE.sub("", IMPORT_RE.sub(aliases, read_text(path)))
         if re.search(r"^\s*(import|export)\b", src, re.M):
             raise ValueError("court: %s uses an import/export the page bundler cannot join" % path)
-        rel = os.path.relpath(path, WEB).replace(os.sep, "/")
+        try:
+            rel = os.path.relpath(path, WEB).replace(os.sep, "/")
+        except ValueError:  # on Windows, a module on another drive than web/ has no relative path
+            rel = path
         for name in TOP_NAME_RE.findall(src):
             if name in owner:
                 raise ValueError("court: the top-level name %s is in both %s and %s; rename one, since joined "

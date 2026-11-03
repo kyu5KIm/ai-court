@@ -165,7 +165,7 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(d["translations"]["ko"]["docs"]["jurors"][0]["reason"], "r")
 
     def test_second_case_waits_in_line_and_a_queued_one_can_be_cancelled(self):
-        s = self.server(slow=0.5)
+        s = self.server(slow=2)  # slow enough that the first trial (4 rounds of calls) outlasts the filing below
         self.assertEqual(s.post("api/trial", {"case": CASE, "jury": 3})[1]["queued"], False)
         time.sleep(1.1)  # run names have one-second resolution
         second = s.post("api/trial", {"case": CASE + " Second.", "jury": 3})[1]
