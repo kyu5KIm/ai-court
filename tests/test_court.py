@@ -597,6 +597,25 @@ class CourtTest(unittest.TestCase):
             self.assertTrue(court.RATE_RE.search(seen), seen)
         self.assertIsNone(court.RATE_RE.search("Not logged in · Please run /login"))
 
+    def test_a_transient_failure_is_tried_again_without_costing_an_attempt(self):
+        exe = self.fake_cli([{"type": "result", "is_error": True, "result": "Failed to refresh OAuth token: another "
+                              "Claude Code process is refreshing it. This is usually transient; retry in a minute"}])
+        with self.assertRaises(court.Transient):
+            court.claude_call(exe, None, "prompt", self.tmp)
+        tries = []
+
+        def flaky():
+            tries.append(1)
+            if len(tries) < 3:
+                raise court.Transient("refresh OAuth token")
+            return "ok"
+        waits, court.TRANSIENT_WAITS = court.TRANSIENT_WAITS, (0, 0, 0)
+        try:
+            self.assertEqual(court.retrying(flaky), "ok")
+        finally:
+            court.TRANSIENT_WAITS = waits
+        self.assertEqual(len(tries), 3)
+
     def test_claude_call_cancel_kills_the_call(self):
         import threading
         exe = self.fake_cli([{"type": "system"}], wait=20)

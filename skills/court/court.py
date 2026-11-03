@@ -607,6 +607,30 @@ class Cancelled(RuntimeError):
     """The user stopped the trial."""
 
 
+class Transient(RuntimeError):
+    """A hiccup the CLI itself calls passing, such as several calls refreshing the login token at once."""
+
+
+TRANSIENT_RE = re.compile(r"refresh OAuth token|usually transient|ECONNRESET|socket hang up|network error|"
+                          r"\b(?:500|502|503)\b", re.I)
+# Short waits before trying a transient failure again; it does not count as one of the call's attempts.
+TRANSIENT_WAITS = (5, 15, 30)
+
+
+def retrying(call, cancel=None):
+    """Run `call()` again after a short wait when it fails with a Transient error."""
+    for wait in TRANSIENT_WAITS + (None,):
+        try:
+            return call()
+        except Transient:
+            if wait is None:
+                raise
+            if cancel is not None and cancel.wait(wait):
+                raise Cancelled("cancelled")
+            if cancel is None:
+                time.sleep(wait)
+
+
 RATE_RE = re.compile(r"rate.?limit|usage limit|session limit|weekly limit|limit reached|hit your (?:\w+ )?limit|"
                      r"overloaded|too many requests|\b(?:429|529)\b", re.I)
 
@@ -697,6 +721,8 @@ def claude_call(claude, model, prompt, cwd, timeout=600, on_text=None, system=No
             err = NOT_LOGGED_IN
         elif RATE_RE.search(err):
             raise RateLimited(err[:300])
+        elif TRANSIENT_RE.search(err):
+            raise Transient(err[:300])
         elif "unknown option" in err.lower() or "unrecognized" in err.lower():
             err += " (CLI 옵션이 바뀌었을 수 있어요. `court.py doctor`로 확인해 주세요.)"
         raise RuntimeError(err[:300])
@@ -730,8 +756,8 @@ def answer_question(state, rec, claude, model, slots):
                     save_question(state, rec)
                 except OSError:
                     pass
-            c = claude_call(claude, model, ask_prompt(state, rec), state["dir"], 300, system=QUESTION_SYSTEM,
-                            on_text=throttled(partial))
+            c = retrying(lambda: claude_call(claude, model, ask_prompt(state, rec), state["dir"], 300,
+                                             system=QUESTION_SYSTEM, on_text=throttled(partial)))
             rec.update(status="done", answer=c["text"], cost={k: v for k, v in c.items() if k != "text"})
         except Exception as e:
             rec.update(status="error", answer="답변을 받지 못했어요: %s" % e)
@@ -783,7 +809,8 @@ def translate_trial(state, lang, claude):
         if key == "jurors":
             ask = "This is a JSON array. Return the same JSON array with its string values translated into %s." % \
                 TRANSLATE_NAMES[lang]
-        c = claude_call(claude, TRANSLATE_MODEL, "%s\n\n%s" % (ask, text), state["dir"], 300, system=TRANSLATE_SYSTEM)
+        c = retrying(lambda: claude_call(claude, TRANSLATE_MODEL, "%s\n\n%s" % (ask, text), state["dir"], 300,
+                                         system=TRANSLATE_SYSTEM))
         costs.append(dict({k: v for k, v in c.items() if k != "text"}, model=TRANSLATE_MODEL))
         return key, c["text"]
 
@@ -952,8 +979,9 @@ def run_trial(state, claude, model=None, log=print, jury_model=None, parallel=WA
         tools = job_tools(state, phase)
         for wait in RATE_WAITS + (None,):
             try:
-                return claude_call(claude, use, prompt, state["dir"], system=RESEARCH_SYSTEM if tools else TRIAL_SYSTEM,
-                                   on_text=throttled(lambda text: write_draft(draft, text)), tools=tools, cancel=cancel)
+                return retrying(lambda: claude_call(
+                    claude, use, prompt, state["dir"], system=RESEARCH_SYSTEM if tools else TRIAL_SYSTEM,
+                    on_text=throttled(lambda text: write_draft(draft, text)), tools=tools, cancel=cancel), cancel)
             except RateLimited as e:
                 if wait is None:
                     raise
@@ -1317,7 +1345,7 @@ def cmd_serve(args):
             if next_phase(state) != "done":
                 return self.send_json(409, {"error": "재판이 끝난 뒤 번역할 수 있어요"})
             key = (os.path.abspath(state["dir"]), lang)
-            done_already = (read_json(translation_path(state, lang)) or {}).get("status") == "done"
+            done_already = (read_json(translation_path(state, lang)) or {}).get("status") == "done"  # an error may retry
             with QLOCK:
                 if done_already or key in translating:
                     return self.send_json(200, {"status": "running"})

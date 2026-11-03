@@ -45,8 +45,18 @@ export function updateTranslateButton() {
   const running = !!(tr && tr.status === "running");
   b.disabled = running;
   b.title = ready ? "" : t("translateTitle");
-  b.textContent = running ? t("translating") : d.source ? t("translated") : ready ? t("translatedShow") : t("translateTo");
-  if (tr && tr.status === "error") b.title = t("translateFail", tr.message || "");
+  const failed = !!(tr && tr.status === "error");
+  b.textContent = running ? t("translating") : d.source ? t("translated") : ready ? t("translatedShow") :
+    failed ? t("translateRetry") : t("translateTo");
+  if (failed) {
+    b.title = t("translateFail", tr.message || "");
+    if (asked.pending) {
+      asked.pending = false;
+      const st = $("#status");
+      st.classList.add("on", "off");
+      st.querySelector("span").textContent = t("translateFail", tr.message || "");
+    }
+  }
   if (ready && asked.pending) {
     asked.pending = false;
     savePref("translated", "1");

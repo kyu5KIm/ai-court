@@ -70,6 +70,7 @@ const STR = {
   translating: ["번역 중…", "Translating…"],
   translated: ["번역됨 · 원문 보기", "Translated · see original"],
   translatedShow: ["번역 보기", "See translation"],
+  translateRetry: ["번역 실패 · 다시 시도", "Translation failed · try again"],
   translateFail: ["번역하지 못했어요: {0}", "Could not translate: {0}"],
   retrialButton: ["재심 열기", "Open a retrial"],
   retrialHint: ["무죄 조건을 붙여 같은 배심원 앞에서 다시 재판해요.", "Try the case again before the same jury, with the conditions for acquittal attached."],
