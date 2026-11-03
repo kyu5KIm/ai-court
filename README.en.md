@@ -182,17 +182,20 @@ JSDoc type checking.
 
 ## What was tested
 
-- Tested on Windows 11 (Korean) with Python 3.13. Not tested on macOS or Linux yet.
-- A page-filed trial (3 jurors) was run to the end with the real `claude`. Question answers were checked only
-  with a fake `claude`.
-- The short system prompt, the `haiku`/`sonnet` model choice and streaming were each checked with real `claude`
-  calls. The full page-filed flow with drafts and a separate jury model was checked with a fake `claude`.
-- It was also measured that `claude -p` calls do not share a prompt cache even when their prompts start the same,
-  so putting the shared record first was left out.
-- Each page extra was checked in a browser. The retrial and the time-left estimate were checked by running a trial
-  to the end on a fake `claude` server; the question chips and the verdict image were checked by intercepting the
-  request and the download inside the page. Sound was checked only to play without errors.
-- Unit tests:
+- 58 automated tests (52 unit tests, and 6 that drive the server over HTTP with a fake `claude`) run on GitHub
+  Actions on Linux, macOS and Windows with Python 3.9 and 3.13.
+- Six trials ran on the real `claude` (CLI 2.1.258), covering web research, a mixed jury, questions in Korean and
+  English, translation, stopping (1.9 seconds from the request), the waiting line, and resuming both a trial the
+  user stopped and one cut off by a dead server. Six bugs found along the way were fixed.
+- The same case before the same 6 jurors (haiku), three times, came out guilty 5:1, 6:0 and 6:0; only the lawyer
+  changed their vote. Three runs are too few to say how much verdicts vary in general.
+- The new-case dialog's token estimate is fitted to these trials: input lands within about 10%, while output varies
+  several-fold with how much the model thinks, so it is shown as a range.
+- `claude -p` calls cannot share a prompt cache even when their prompts start the same; repeated paths and the
+  duplicated votes were cut from the prompts instead.
+- Not checked yet: whether the sources web research cites are right, the phone layout, and a 12-juror trial on the
+  real `claude`.
+- Running the tests:
 
 ```bash
 python3 -m unittest discover -s tests
