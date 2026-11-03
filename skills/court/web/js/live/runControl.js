@@ -29,6 +29,11 @@ async function send(path) {
 export function setupRunControl() {
   $("#b-stop").addEventListener("click", async () => {
     if (!window.confirm(t("stopConfirm"))) return;
+    // Stay on this trial: the next one in line becomes the latest the moment this one stops.
+    if (!app.run && app.data.run) {
+      app.run = String(app.data.run);
+      try { history.replaceState(null, "", "?run=" + encodeURIComponent(app.run)); } catch (e) { /* file:// */ }
+    }
     $("#b-stop").disabled = true;
     $("#b-stop").textContent = t("stopping");
     await send("api/cancel");
