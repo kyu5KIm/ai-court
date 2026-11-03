@@ -35,17 +35,19 @@ function roughTokens(n) {
 }
 
 /**
- * A rough figure for the whole trial, from a measured 3-juror trial: the four statements come to about 4,400
- * tokens of text every later call reads. Output counts the model's thinking too, which swings widely by model,
- * and one web search costs about 7,000 tokens of input on the side.
+ * A rough figure for the whole trial, fitted to five measured trials (3 and 6 jurors, input within about 10%):
+ * the four statements come to about 3,600 tokens that every later call reads, and one web search costs about
+ * 7,000 tokens of input on the side. Output counts the model's thinking, which swings several-fold from call to
+ * call, so it is a range: the low end is what sonnet and opus wrote, the high end what haiku did.
  */
 function updateEstimate() {
   const c = Math.round($("#nc-case").value.length / 2.5), n = Number($("#nc-jury").value) || 6;
-  const statements = 4400;
+  const statements = 3600;
   const research = $("#nc-research").checked ? 2 * 7000 : 0;
   const input = 2 * (450 + c) + 2 * (500 + c + 1200) + n * (550 + c + statements) + (650 + c + statements + n * 110) + research;
-  const output = 2 * 2400 + 2 * 2500 + n * 1500 + 5000;
-  $("#nc-estimate").textContent = t("ncEstimate", roughTokens(input), roughTokens(output));
+  const low = 2 * 2000 + 2 * 2000 + n * 500 + 3000;
+  const high = 2 * 9000 + 2 * 7000 + n * 7000 + 9200;
+  $("#nc-estimate").textContent = t("ncEstimate", roughTokens(input), roughTokens(low) + "~" + roughTokens(high));
 }
 
 function closeNewCase() {
