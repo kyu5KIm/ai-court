@@ -591,6 +591,12 @@ class CourtTest(unittest.TestCase):
             court.claude_call(exe, None, "prompt", self.tmp)
         self.assertIn("doctor", str(e.exception))
 
+    def test_every_limit_message_seen_so_far_counts_as_a_limit(self):
+        for seen in ("You've hit your limit · resets 3pm", "You've hit your session limit · resets 3:50pm (Asia/Seoul)",
+                     "Claude usage limit reached", "API Error: 429 rate_limit_error", "API Error: 529 Overloaded"):
+            self.assertTrue(court.RATE_RE.search(seen), seen)
+        self.assertIsNone(court.RATE_RE.search("Not logged in · Please run /login"))
+
     def test_claude_call_cancel_kills_the_call(self):
         import threading
         exe = self.fake_cli([{"type": "system"}], wait=20)

@@ -607,7 +607,8 @@ class Cancelled(RuntimeError):
     """The user stopped the trial."""
 
 
-RATE_RE = re.compile(r"rate.?limit|usage limit|limit reached|hit your limit|overloaded|too many requests|\b(?:429|529)\b", re.I)
+RATE_RE = re.compile(r"rate.?limit|usage limit|session limit|weekly limit|limit reached|hit your (?:\w+ )?limit|"
+                     r"overloaded|too many requests|\b(?:429|529)\b", re.I)
 
 
 def kill_tree(p):
