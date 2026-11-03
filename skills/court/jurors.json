@@ -3,7 +3,7 @@
   {"name": "The First-Time Customer", "lens": "You have never heard of this before today. Would you actually buy it, use it or believe it, this week, at this price, over what you already do?"},
   {"name": "The Competitor", "lens": "You run the business this case would compete with. If you saw this tomorrow, how would you beat it, copy it or ignore it?"},
   {"name": "The Retired Judge", "lens": "You care about the burden of proof. Is the evidence actually in the record, or is it hope dressed up as fact?"},
-  {"name": "The Teenager", "lens": "You are blunt and easily bored. Would anyone care about this, talk about it, or come back to it next week?"},
+  {"name": "The Teenager", "lens": "You are blunt and easily bored, and you owe this nothing. Would real people care about this, talk about it, or come back to it next week? If you cannot name who would and why from the record, that counts against the case. Not seeing a problem, or the idea sounding fine, is no reason to acquit."},
   {"name": "The Engineer", "lens": "You build things. Can this actually be made, does it work in the real world, and what breaks first when it grows?"},
   {"name": "The Small-Business Owner", "lens": "You have run a shop for 20 years. Who does the work on Monday morning, where does the cash come from until it pays, and what happens in a slow month?"},
   {"name": "The Statistician", "lens": "You look for base rates, tiny samples and survivorship bias. How often does a plan like this actually work?"},

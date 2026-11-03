@@ -26,11 +26,14 @@ import { setupShare } from "./ui/share.js";
 import { setupTrials } from "./live/trials.js";
 import { setupCompare } from "./live/compare.js";
 import { setupRetrial } from "./live/retrial.js";
+import { setupRunControl } from "./live/runControl.js";
+import { withTranslation, setupTranslate } from "./live/translate.js";
+import { setupReplay } from "./live/replay.js";
 import { applyI18n } from "./core/i18n.js";
 import { setupLang } from "./ui/lang.js";
 
 function boot() {
-  app.data = JSON.parse($("#court-data").textContent);
+  app.data = withTranslation(JSON.parse($("#court-data").textContent));
   app.token = app.data.token || "";
   app.run = new URLSearchParams(location.search).get("run") || "";
 
@@ -58,13 +61,16 @@ function boot() {
   setupTrials();
   setupCompare();
   setupRetrial();
+  setupRunControl();
+  setupTranslate();
+  setupReplay();
   liveBadge();
   waitingFx();
   watchLayout();
 
   // Opened right after filing a case: play the new trial as it arrives.
   if (/[?&]play=1/.test(location.search)) {
-    try { history.replaceState(null, "", location.pathname); } catch (e) { /* file:// pages can't */ }
+    try { history.replaceState(null, "", location.pathname + (app.run ? "?run=" + encodeURIComponent(app.run) : "")); } catch (e) { /* file:// pages can't */ }
     if (!app.data.empty) setPlaying(true);
   }
   startPolling();

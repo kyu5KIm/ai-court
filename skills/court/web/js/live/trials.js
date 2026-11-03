@@ -1,5 +1,5 @@
 // @ts-check
-// Past trials: a list of every trial in .court/ (newest first), each one openable with ?run=NAME.
+// Past trials: a list of every trial in every folder that has held one (newest first), each openable with ?run=NAME.
 import { app } from "../core/state.js";
 import { $ } from "../core/dom.js";
 import { esc } from "../core/markdown.js";
@@ -30,7 +30,8 @@ async function openTrials() {
       '<li class="trial' + (tr.run === here ? " here" : "") + '">' +
       '<label class="pick"><input type="checkbox" value="' + esc(tr.run) + '" aria-label="' + t("pickCompare") + '"></label>' +
       '<a href="./?run=' + encodeURIComponent(tr.run) + '">' +
-      '<span class="when">' + esc(runDate(tr.run)) + (tr.latest ? t("latest") : "") + (tr.run === here ? t("viewing") : "") + "</span>" +
+      '<span class="when">' + esc(runDate(tr.run)) + (tr.latest ? t("latest") : "") + (tr.run === here ? t("viewing") : "") +
+      (tr.here === false ? esc(t("otherFolder", String(tr.folder || "").split(/[\\/]/).pop() || "")) : "") + "</span>" +
       '<span class="what">' + esc(tr.case || t("noCase")) + "</span></a>" + verdictBadge(tr) + "</li>").join("")
       : '<li class="muted">' + t("noTrials") + "</li>";
   } catch (e) {

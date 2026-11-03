@@ -11,3 +11,4 @@
 .ask button{flex:0 0 auto}
 .ask-note{font-size:11px;color:var(--muted);padding:0 14px 10px;margin:0}
 .ask-note:empty{display:none}
+.replay-cmd{display:inline-block;margin:6px 0;padding:2px 6px;border-radius:6px;background:var(--panel-2);word-break:break-all;font-size:12px}

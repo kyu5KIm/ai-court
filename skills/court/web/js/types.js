@@ -38,7 +38,7 @@
 
 /**
  * @typedef {object} Runner
- * @property {"running" | "done" | "error"} status
+ * @property {"queued" | "running" | "done" | "error" | "cancelled" | "interrupted"} status
  * @property {string} message
  * @property {number | null} [seconds]  time since the trial started
  * @property {Record<string, any>} [calls]  per call: seconds, first_text, input, cache_read, cache_write, output, model
@@ -51,6 +51,7 @@
  * @property {string} verdict
  * @property {number} guilty
  * @property {number} not_guilty
+ * @property {number} no_vote
  * @property {string} case
  * @property {string} judge
  * @property {Statement[]} statements
@@ -66,6 +67,12 @@
  * @property {boolean} [ask]     the claude CLI was found
  * @property {boolean} [login]   the claude CLI is logged in
  * @property {string} [token]    sent back with every POST
+ * @property {number} [ahead]    trials ahead of this one in the server's line
+ * @property {string} [run]      the trial's folder name
+ * @property {{seconds: number} | null} [timing]  time taken, from the files, for a trial with no runner.json
+ * @property {Record<string, any>} [translations]  by language: status, message, docs
+ * @property {string} [serve_command]  the command that opens this trial live
+ * @property {{case: string, judge: string}} [source]  the original text, when a translation is on screen
  */
 
 /** @typedef {{x: number, y: number}} Pos */

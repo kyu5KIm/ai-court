@@ -24,6 +24,9 @@ up what would have to change to flip the votes.
 | Answer language | Sub-agents are told to write in the language of the case file. Write the case in Korean and the statements and judgment come back in Korean. |
 | Drafts while writing | For trials filed from the page, statements and the judgment show as "writing" drafts before they are finished. Question answers fill in as they are written too. |
 | Faster and lighter | Page-filed trials and questions use a short system prompt of their own, sending about 9,100 fewer tokens per call. Jurors can run on a faster model (haiku), and you can set how many calls run at once. Each call's time and tokens are kept in `runner.json`. |
+| Sturdier verdicts | Each juror reads the two sides in its own seeded order. A jury can mix haiku, sonnet and opus. The judge lists "what nobody checked", and the verdict says it is neither a poll of people nor professional advice. Optionally, the prosecutor and the defense search the web and cite sources. |
+| Stop, resume, wait in line | Stop a trial from the page, and carry on with only the unfinished parts, even after the server died. A new case filed during a trial waits in line instead of being refused. A plan limit makes a call wait and retry, then stops the trial rather than throwing away a vote. |
+| Translation | Translates a finished trial's case, statements, votes and judgment into the page language and keeps it (about 7 haiku calls). Answers follow the page language too. |
 | Page extras | Past trials and a side-by-side comparison, a retrial button, a scene timeline, click-a-character, suggested questions, a cost and time panel, a vote map by juror group, verdict image export, print, light/dark, sound effects and an English page. See "What you can do on the courtroom page" below. |
 
 ## Install
@@ -59,12 +62,15 @@ same. The skill runs its helper with `python3`, so Python 3 is required.
 | `--quick` | 6 jurors, 11 sub-agent calls |
 | `--jury N` | 3 to 12 jurors |
 | `--seed S` | Fixes which jurors sit on a smaller jury |
+| `--research` | The opening statements may search the web and must cite sources. Takes longer and uses more. |
 
 The jurors know only what you write. The more you put in numbers (money and time you can spend, what you have
 tried and what happened, who it is for, price and timeline), the more concrete the verdict. A trial writes
 several files, so turning on accept-edits mode (Shift+Tab) saves you from approving each one.
 
-When a trial opens, Claude also starts the courtroom server and gives you `http://127.0.0.1:8765/`. When the
+When a trial opens, Claude also starts the courtroom server and gives you `http://127.0.0.1:8765/`. If the `claude`
+command is logged in, Claude runs the trial with `court.py run`, so drafts, costs and the stop button work as they do
+for a page-filed trial. If not, it uses sub-agents, and only the time taken is recorded. When the
 trial ends, the verdict `VERDICT.md` and a replay page `trial.html` are saved in `.court/<date-time>/`.
 
 ### 2. Open a trial straight from the web courtroom
@@ -74,7 +80,7 @@ python3 ~/.claude/skills/court/court.py serve
 ```
 
 Open `http://127.0.0.1:8765/` in a browser and press **＋ New case**. Trial records collect in `.court/` inside
-the folder where you ran the command. This route and the questions use the `claude` command installed on your
+the folder where you ran the command, and "Past trials" also lists trials opened in other folders. This route and the questions use the `claude` command installed on your
 computer, so log in once first:
 
 ```bash
@@ -86,15 +92,17 @@ claude auth login
 | Command | What it does |
 | --- | --- |
 | `court.py serve [--port P] [--model M] [--jury-model J] [--parallel N]` | The live courtroom server. Takes new cases and questions. |
-| `court.py run [--model M] [--jury-model J] [--parallel N]` | Runs the latest trial opened with `init` to the end with `claude -p`. |
+| `court.py run [--model M] [--jury-model J] [--parallel N] [--run NAME]` | Runs what is still missing of the latest trial opened with `init` (or the named one) with `claude -p`. This also resumes a stopped trial. |
+| `court.py doctor [--call]` | Checks the `claude` command's path, version and login, and the options this script uses. `--call` also makes one small call. |
+| `court.py update [--check \| --upstream]` | Installs or checks for a newer version. `--upstream` says whether the original has new commits. It only goes online when asked. |
 | `court.py render` | Counts the votes and writes `VERDICT.md` and `trial.html`. |
 | `court.py plan / init / next / prompts / check / tally` | The original bookkeeping commands that drive a trial. |
 
 | Option | Meaning |
 | --- | --- |
 | `--model M` | The model every role uses. Leave it out for `claude`'s default model. |
-| `--jury-model J` | A model for the jurors only (for example `haiku`). Also selectable as "Jury model" in the new-case dialog. |
-| `--parallel N` | How many calls of one phase run at once (1 to 12, default 6). Raise it to 12 to run a 12-person jury in one go, but it is more likely to hit your plan's rate limit, and a juror that fails twice is recorded as "no vote". |
+| `--jury-model J` | A model for the jurors only (`haiku`, `sonnet`, `opus`, or `mixed` to rotate them by seat). Also selectable as "Jury model" in the new-case dialog. |
+| `--parallel N` | How many calls of one phase run at once (1 to 12, default 6). Raise it to 12 to run a 12-person jury in one go, but it is more likely to hit your plan's rate limit. A call that hits the limit waits and retries, then the trial stops. A juror that fails twice for any other reason is recorded as "no vote", and the verdict card says so. |
 
 If `claude` is not on your PATH, set the `COURT_CLAUDE` environment variable to its path.
 
@@ -108,28 +116,34 @@ time to the first words, the token counts and the model used. Use it to see whic
 | Scene timeline | Bar under the stage, phase steps in the header | Jump straight to a scene. Earlier scenes appear at once and the chosen one plays. |
 | Click a character | Characters on the stage | Jump to that person's latest words and make them the one you will question. Works from the keyboard too (Tab, then Enter). |
 | Suggested questions | Chips above the ask box | One tap fills in who and what, and sends it. Questions about the verdict appear only after the judgment. |
-| Past trials | "Past trials" in the header | Lists the trials in `.court/`, newest first, and opens the one you pick (`?run=NAME`). You can question older trials too. |
-| Compare trials | Tick two in "Past trials" | Puts two verdicts side by side and marks the jurors who changed their vote. |
+| Stop / resume | Header | Cuts the running calls, or calls only the unfinished parts of a stopped trial. A case waiting in line can be taken out too. |
+| Past trials | "Past trials" in the header | Lists the trials from every folder that has held one, newest first, and opens the one you pick (`?run=NAME`). You can question older trials too. |
+| Compare trials | Tick two in "Past trials" | Puts two verdicts side by side and marks the jurors who changed their vote. If the case text is identical, it says changed votes are variation in the AI's answers. |
+| Run the same case again | Clerk's closing scene | Opens the same case before the same jury, so you can compare how much the answers vary. |
 | Retrial | "Retrial" in the header, the clerk's closing scene | Fills the new-case dialog with the original case, the conditions for acquittal, a blank "what I did and what came of it", and the same jury size and seed. |
-| Cost and time | Folding panel above the footer | Total time, calls, tokens and a per-call table for page-filed trials. While a trial runs it also shows "about N seconds to the verdict". |
+| Cost and time | New-case dialog, folding panel above the footer | Estimated tokens before you file; afterwards the total time, calls, tokens and a per-call table. While a trial runs it also shows "about N seconds to the verdict". |
 | Vote map | Verdict card | Groups the jurors as money / customers & market / execution / risk & rules and shows who stood where. |
 | Verdict image | "Verdict image" in the header | Downloads a PNG with the case, the verdict stamp, the vote map and the conditions for acquittal (no external library). |
 | Print | "Print" in the header | Prints the record and the judgment as a document, without the stage. |
 | Theme | ◐ in the header | System / light / dark. The choice is remembered in this browser. |
 | Sound effects | 🔇 in the controls | Gavel, stamp and vote-sign sounds. Off by default (synthesised with Web Audio, no sound files). |
-| English | EN / 한 in the header | Switches the page text to English. The case, statements and judgment stay as written. |
+| English | EN / 한 in the header | Switches the page text to English. The case, statements and judgment stay as written unless you use the translate button below. |
+| Translate | Header, once the trial is over | Translates the trial into the page language and keeps it; you can switch between it and the original. A retrial always uses the original. |
+| Replay | A saved `trial.html` | Lets you copy the command that opens it live, and links straight there if a server is running on port 8765. |
 | Shortcuts | `?` | Space play/pause, → next, Home from the start. On a phone, swipe left for the next scene. |
 
 ## Cost and safety
 
-- A trial is 8 `claude` calls (3 jurors) to 17 (12 jurors). Each question is one call. All of it counts toward
-  your Claude plan's usage.
+- A trial is 8 `claude` calls (3 jurors) to 17 (12 jurors). Each question is one call, a translation about 7. All of
+  it counts toward your Claude plan's usage. Calls cannot share a prompt cache with each other.
 - The server listens on this computer only (`127.0.0.1`). It refuses requests for any other host and requests
   without the page's token.
 - The `claude -p` calls made from the page run with every tool turned off (`--tools ""`) and see only the trial
-  record. They do not read files or run commands.
-- Files are written only inside `.court/` in the folder you run it from. `.court/` is in `.gitignore`, so trial
-  records do not end up in the repository.
+  record. They do not read files or run commands. The one exception is the opening statements of a trial with web
+  search on, which may use `WebSearch`; search terms can then contain parts of your case.
+- Trial records are written inside `.court/` in the folder you run it from. `.court/` is in `.gitignore`, so they do
+  not end up in the repository. The only other file is a list of folders that have held a trial, in
+  `~/.court/folders.json` (`COURT_HOME` moves it).
 
 ## Page code layout
 
@@ -150,6 +164,7 @@ skills/court/web/
     transcript/         messages (transcript messages) · intro (first card)
     live/               api · poll (live updates) · status · draft (drafts while writing) · questions · chips (suggested questions)
                         newCase · trials (past trials) · compare · retrial · cost (cost and time)
+                        runControl (stop, resume) · translate · replay (saved trial.html)
     ui/                 theme · help · print · sound · swipe · share (verdict image) · lang (EN / 한)
 ```
 
@@ -157,8 +172,8 @@ When `court.py` serves the page it inlines `styles/` as `<style>` and joins the 
 order into one script. The saved `trial.html` is built the same way, so it opens as a single file. When you
 change a module, keep to these rules:
 
-- Import names explicitly (`import { a, b } from "./x.js";`) and export with `export function / const / let / class`.
-- Joined, every module shares one scope, so a top-level name must not be reused in another module. A test checks this.
+- Import names explicitly (`import { a, b as c } from "./x.js";`) and export with `export function / const / let / class`.
+- Joined, every module shares one scope, so a top-level name must not be reused in another module. Building the page refuses a clash and names both files.
 - Page text goes into `core/i18n.js` in both Korean and English and is used through `t("key")` or `data-i18n="key"`.
   A test checks that every key used exists.
 
@@ -167,17 +182,20 @@ JSDoc type checking.
 
 ## What was tested
 
-- Tested on Windows 11 (Korean) with Python 3.13. Not tested on macOS or Linux yet.
-- A page-filed trial (3 jurors) was run to the end with the real `claude`. Question answers were checked only
-  with a fake `claude`.
-- The short system prompt, the `haiku`/`sonnet` model choice and streaming were each checked with real `claude`
-  calls. The full page-filed flow with drafts and a separate jury model was checked with a fake `claude`.
-- It was also measured that `claude -p` calls do not share a prompt cache even when their prompts start the same,
-  so putting the shared record first was left out.
-- Each page extra was checked in a browser. The retrial and the time-left estimate were checked by running a trial
-  to the end on a fake `claude` server; the question chips and the verdict image were checked by intercepting the
-  request and the download inside the page. Sound was checked only to play without errors.
-- Unit tests:
+- 58 automated tests (52 unit tests, and 6 that drive the server over HTTP with a fake `claude`) run on GitHub
+  Actions on Linux, macOS and Windows with Python 3.9 and 3.13.
+- Six trials ran on the real `claude` (CLI 2.1.258), covering web research, a mixed jury, questions in Korean and
+  English, translation, stopping (1.9 seconds from the request), the waiting line, and resuming both a trial the
+  user stopped and one cut off by a dead server. Six bugs found along the way were fixed.
+- The same case before the same 6 jurors (haiku), three times, came out guilty 5:1, 6:0 and 6:0; only the lawyer
+  changed their vote. Three runs are too few to say how much verdicts vary in general.
+- The new-case dialog's token estimate is fitted to these trials: input lands within about 10%, while output varies
+  several-fold with how much the model thinks, so it is shown as a range.
+- `claude -p` calls cannot share a prompt cache even when their prompts start the same; repeated paths and the
+  duplicated votes were cut from the prompts instead.
+- Not checked yet: whether the sources web research cites are right, the phone layout, and a 12-juror trial on the
+  real `claude`.
+- Running the tests:
 
 ```bash
 python3 -m unittest discover -s tests

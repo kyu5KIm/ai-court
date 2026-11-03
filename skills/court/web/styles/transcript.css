@@ -67,3 +67,5 @@
 .past summary{cursor:pointer;font-size:13px;color:var(--muted)}
 .past[open] summary{margin-bottom:10px}
 .past .qa{display:flex;flex-direction:column;gap:10px;margin-bottom:10px}
+.verdict .caveat,.verdict .no-vote-warn{max-width:520px;margin:12px auto 0;font-size:12px;line-height:1.5;opacity:.88}
+.verdict .no-vote-warn{font-weight:700;opacity:1}

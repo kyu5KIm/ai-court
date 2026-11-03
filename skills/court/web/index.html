@@ -33,7 +33,10 @@
     <div class="tools" id="tools">
       <div class="tool-group trial" role="group" data-i18n-aria="trialTools" aria-label="재판">
         <button class="tool" id="b-trials" type="button" data-i18n="trialsBtn" hidden>지난 재판</button>
+        <button class="tool" id="b-stop" type="button" data-i18n="stopBtn" data-i18n-title="stopTitle" hidden>재판 중지</button>
+        <button class="tool" id="b-resume" type="button" data-i18n="resumeBtn" data-i18n-title="resumeTitle" hidden>이어서 진행</button>
         <button class="tool" id="b-retrial" type="button" data-i18n="retrialBtn" data-i18n-title="retrialTitle" hidden>재심</button>
+        <button class="tool" id="b-translate" type="button" hidden></button>
         <button class="tool" id="b-image" type="button" data-i18n="imageBtn" data-i18n-title="imageTitle" hidden>평결 이미지</button>
         <button class="tool" id="b-print" type="button" data-i18n="printBtn" data-i18n-title="printTitle">인쇄</button>
       </div>
@@ -152,12 +155,15 @@
           <option value="" data-i18n="ncSameModel">다른 역할과 같은 모델</option>
           <option value="haiku" data-i18n="ncHaiku">haiku · 빠르고 적게 씀</option>
           <option value="sonnet">sonnet</option>
+          <option value="mixed" data-i18n="ncMixed">섞어서 · haiku, sonnet, opus 번갈아</option>
         </select>
       </label>
       <label><span data-i18n="ncSeed">시드 (배심원 고정)</span>
         <input id="nc-seed" inputmode="numeric" data-i18n-placeholder="ncSeedPlaceholder">
       </label>
     </div>
+    <label class="nc-check"><input type="checkbox" id="nc-research"> <span data-i18n="ncResearch">검사와 변호인이 웹 검색으로 사실을 찾아 출처와 함께 제시 (호출당 시간과 사용량이 늘어요)</span></label>
+    <p class="nc-estimate" id="nc-estimate" aria-live="polite"></p>
     <p class="nc-err" id="nc-err"></p>
     <div class="nc-actions">
       <button type="button" id="nc-cancel" data-i18n="close">닫기</button>

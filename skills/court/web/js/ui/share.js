@@ -16,11 +16,11 @@ function hasVerdict() {
   return !app.data.empty && js.length > 0 && js.every((j) => j.voted);
 }
 
-/** The judge's "Conditions for acquittal" items, plain text. */
-export function acquittalConditions() {
+/** The judge's "Conditions for acquittal" items, plain text. @param {string} [judgment] */
+export function acquittalConditions(judgment) {
   const out = [];
   let inside = false;
-  for (const raw of String(app.data.judge || "").split("\n")) {
+  for (const raw of String(judgment == null ? app.data.judge || "" : judgment).split("\n")) {
     const l = raw.trim();
     // Judges word this heading freely: "Conditions for acquittal", "무죄 조건", "무죄로 바뀔 조건 3가지"...
     if (/^#{1,6}\s/.test(l)) { inside = /acquittal|무죄.{0,8}조건/i.test(l); continue; }
@@ -134,6 +134,7 @@ export function drawVerdict() {
 
   g.fillStyle = "#74685a";
   g.font = "24px " + SANS;
+  g.fillText(t("caveatImg"), P, H - 100);
   g.fillText("/court skill by Alex Chen (@nocodealex) · github.com/alexyc9381/court-skill", P, H - 60);
   return canvas;
 }

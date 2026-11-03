@@ -1,6 +1,6 @@
 // @ts-check
 // While a live trial runs: the status pill, and "…" over whoever court.py is waiting on.
-import { app, player, waitingForMore } from "../core/state.js";
+import { app, player, waitingForMore, stoppedEarly } from "../core/state.js";
 import { $ } from "../core/dom.js";
 import { t } from "../core/i18n.js";
 import { cast } from "../stage/cast.js";
@@ -13,9 +13,16 @@ const WAIT_KEY = { opening: "waitOpening", rebuttal: "waitRebuttal", jury: "wait
 export function waitingFx() {
   const st = $("#status"), d = app.data;
   for (const k in cast) cast[k].el.classList.remove("waiting");
-  if (d.runner && d.runner.status === "error") {
+  if (stoppedEarly()) {
+    const status = d.runner ? d.runner.status : "";
     st.classList.add("on", "off");
-    st.querySelector("span").textContent = t("stopped", d.runner.message);
+    st.querySelector("span").textContent = status === "error" ? t("stopped", d.runner ? d.runner.message : "") : t(status);
+    return;
+  }
+  if (d.runner && d.runner.status === "queued") {
+    st.classList.add("on");
+    st.classList.remove("off");
+    st.querySelector("span").textContent = t("queued", d.ahead || 0);
     return;
   }
   if (!waitingForMore()) { st.classList.remove("on"); return; }

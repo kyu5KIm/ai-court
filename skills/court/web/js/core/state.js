@@ -14,10 +14,16 @@ export const app = { data: /** @type {any} */ (null), token: "", online: true, r
  */
 export const player = { scenes: [], idx: 0, playing: false, cur: null };
 
+/** The trial stopped before its end: an error, the user's stop button, or a server that went away. */
+export function stoppedEarly() {
+  const r = app.data.runner;
+  return !!(r && !app.data.finished && ["error", "cancelled", "interrupted"].includes(r.status));
+}
+
 /** True while a live trial is still running, so more scenes will arrive. */
 export function waitingForMore() {
   const d = app.data;
-  return !!(d.live && !d.finished && !d.empty && !(d.runner && d.runner.status === "error"));
+  return !!(d.live && !d.finished && !d.empty && !stoppedEarly());
 }
 
 /** Every scene has played and none are coming. */

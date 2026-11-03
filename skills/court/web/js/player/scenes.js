@@ -106,7 +106,8 @@ export function buildScenes() {
   const v = verdictParts();
   S.push({
     phase: 4, actor: "judge", kind: "verdict", hold: 2800, verdict: v,
-    html: '<div class="lead">' + t("verdictLead") + '</div><div class="v">' + v[0] + '</div><div class="count">' + v[1] + "</div>" + voteMap(),
+    html: '<div class="lead">' + t("verdictLead") + '</div><div class="v">' + v[0] + '</div><div class="count">' + v[1] + "</div>" + voteMap() +
+      (d.no_vote ? '<p class="no-vote-warn">' + t("noVoteWarn", d.no_vote) + "</p>" : "") + '<p class="caveat">' + t("caveat") + "</p>",
     enter: (instant) => verdictFx(v, instant),
     after: parkStamp,
   });
@@ -115,6 +116,7 @@ export function buildScenes() {
   S.push({ phase: 5, actor: "clerk", side: "center", name: t("clerk"), tag: t("tagClose"),
     html: t("clerkClose") + '<p class="path"><code>' + esc(d.dir) + "</code></p>" +
       (retrialOffered() ? '<p class="action"><button type="button" class="primary" data-action="retrial">' + t("retrialButton") +
-        '</button> <span class="muted">' + t("retrialHint") + '</span></p>' : "") });
+        '</button> <span class="muted">' + t("retrialHint") + '</span></p>' +
+        '<p class="action"><button type="button" data-action="same-case">' + t("sameCaseButton") + '</button> <span class="muted">' + t("sameCaseHint") + "</span></p>" : "") });
   return S;
 }

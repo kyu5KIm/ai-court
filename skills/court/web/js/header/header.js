@@ -19,9 +19,6 @@ export function renderHeader() {
   $("#phases").innerHTML = PHASE_NAMES.map((p) => "<li>" + p + "</li>").join("");
   $("#foot").innerHTML = t("footFolder") + esc(d.dir) + (d.seed != null ? t("footSeed") + esc(d.seed) : "") +
     '<br>Made with <a href="https://github.com/alexyc9381/court-skill">/court</a>, a free Claude Code skill by Alex Chen (@nocodealex).';
-  if (!d.live) {
-    $("#foot").insertAdjacentHTML("beforeend", t("footServe"));
-  }
 }
 
 /** Highlight the current phase chip; earlier ones read as done. @param {number} p */

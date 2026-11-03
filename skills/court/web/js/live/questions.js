@@ -8,7 +8,7 @@ import { say } from "../stage/bubble.js";
 import { measure } from "../stage/layout.js";
 import { logEl, avatar, follow, nearBottom } from "../transcript/messages.js";
 import { postJSON } from "./api.js";
-import { t, roleName } from "../core/i18n.js";
+import { t, roleName, lang } from "../core/i18n.js";
 
 /**
  * Rendered Q&A pairs by question id. `fresh` ones were asked on this page and get a stage reaction.
@@ -125,7 +125,7 @@ export function setupAsk() {
     if (!text) return;
     btn.disabled = true;
     try {
-      const j = await postJSON("api/ask", { who, q: text }, t("askFail"));
+      const j = await postJSON("api/ask", { who, q: text, lang }, t("askFail"));
       input.value = "";
       note.textContent = t("askWaiting");
       if (!qa.els[j.id]) addQA({ id: j.id, who, q: text, status: "pending", answer: "" }, true);

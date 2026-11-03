@@ -51,6 +51,7 @@ Read the flags out of the request. Everything that is not a flag is the case.
 | `--jury N` | N jurors, 3 to 12. Default 12. |
 | `--quick` | 6 jurors. |
 | `--seed S` | Fixes which jurors sit on a smaller jury. Default: random, and recorded. |
+| `--research` | Lets the opening statements search the web and cite sources. Slower and uses more. |
 
 Run `COURT plan` with the same flags and tell the user in one line how big the trial is, for example
 "12 jurors, 17 sub-agent calls", then start. If this skill fired on its own (the user never asked for
@@ -75,7 +76,7 @@ know only what is in the case file, so write `.court/case.md` to stand on its ow
 ## Step 3: open the trial
 
 ```bash
-COURT init --case-file .court/case.md [--jury N | --quick] [--seed S]
+COURT init --case-file .court/case.md [--jury N | --quick] [--seed S] [--research]
 ```
 
 Then open the live courtroom. Start `COURT serve` as a **background** command (in Claude Code, Bash
@@ -95,7 +96,14 @@ for them. From a terminal, `COURT run` does the same for the latest trial opened
 
 ## Step 4: the trial
 
-Always drive it with `COURT next`. It reads the files on disk and tells you the next phase and the
+First run `COURT doctor`. If it exits 0, run the whole trial with `COURT run` as a **background** command
+and wait for it to exit, then go to Step 5. The page then shows statements as they are written, each
+call's time and tokens, and a stop and a resume button, none of which sub-agents can provide. If `COURT
+doctor` fails, or `COURT run` ends with "the trial stopped" for any reason other than the plan's limit,
+drive the rest yourself with sub-agents as below: both routes only ever fill in what is missing. If it
+stopped on the plan's limit, tell the user; `COURT run` picks it up once the limit lifts.
+
+With sub-agents, always drive it with `COURT next`. It reads the files on disk and tells you the next phase and the
 exact command. The phases run in this order: `opening`, `rebuttal`, `jury`, `judge`.
 
 Every phase works the same way:
